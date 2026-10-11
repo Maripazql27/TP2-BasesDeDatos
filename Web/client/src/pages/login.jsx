@@ -2,14 +2,19 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { iniciarSesion } from '../api';
 
+// onLogin: función que App nos da para guardar el usuario en sesión.
 export default function Login({ onLogin }) {
+  // Estado de los campos y del mensaje de error.
   const [nombreUsuario, setNombreUsuario] = useState('');
   const [clave, setClave] = useState('');
   const [error, setError] = useState('');
-  const navegar = useNavigate();
+  const navegar = useNavigate(); // para cambiar de pantalla desde el código
 
+
+  
+  // Se ejecuta al enviar el formulario.
   async function enviar(evento) {
-    evento.preventDefault();
+    evento.preventDefault(); // evita que el navegador recargue la página
     setError('');
     const respuesta = await iniciarSesion(nombreUsuario, clave);
     if (respuesta.ok) {

@@ -10,6 +10,9 @@ export default function FormularioBeneficiario({
   onCancelar,
 }) {
   const editando = Boolean(beneficiario);
+
+   // Todos los campos en un solo objeto de estado. Si se edita, algunos campos
+  // arrancan con el valor actual del beneficiario.
   const [datos, setDatos] = useState({
     idTipoDocuIdentidad: tiposDocumento[0]?.Id ?? '',
     valorDocumentoIdentidad: '',
@@ -22,10 +25,13 @@ export default function FormularioBeneficiario({
     porcentaje: beneficiario?.Porcentaje ?? '',
   });
 
+  // Un solo manejador para todos los campos: usa el atributo "name" del
+  // campo para saber cuál propiedad del estado actualizar.
   function cambiar(evento) {
     setDatos({ ...datos, [evento.target.name]: evento.target.value });
   }
 
+  // Al enviar: los campos numéricos se convierten de texto a número.
   function enviar(evento) {
     evento.preventDefault();
     onGuardar({
@@ -39,7 +45,7 @@ export default function FormularioBeneficiario({
   return (
     <form className="formulario" onSubmit={enviar}>
       <h2>{editando ? 'Editar beneficiario' : 'Agregar beneficiario'}</h2>
-
+      {/* Documento: solo se pide al AGREGAR (al editar no se puede cambiar) */}
       {!editando && (
         <>
           <label>
@@ -63,7 +69,7 @@ export default function FormularioBeneficiario({
         Nombre
         <input name="nombre" value={datos.nombre} onChange={cambiar} maxLength={64} required />
       </label>
-
+      {/* Datos personales: solo al AGREGAR. Se piden 2 teléfonos*/}
       {!editando && (
         <>
           <label>
@@ -97,6 +103,8 @@ export default function FormularioBeneficiario({
           ))}
         </select>
       </label>
+
+       {/* Porcentaje: solo al AGREGAR. Después se cambia junto con los demás */}
          {!editando && (
         <label>
           Porcentaje (0 a 100)

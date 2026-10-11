@@ -1,5 +1,6 @@
 const USAR_MOCK = true; // permite las pruebas con datos simulados
 
+// Simula la demora de una petición real (milisegundos) para ver "Cargando...".
 const esperar = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
 
 export async function iniciarSesion(nombreUsuario, clave) {

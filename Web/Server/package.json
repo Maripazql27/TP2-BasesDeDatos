@@ -1,17 +1,17 @@
 {
-  "name": "server",
+  "name": "tp2-servidor",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
+  "private": true,
   "type": "module",
+  "description": "Servidor (capa lógica) del TP2 de Base de Datos 1: recibe peticiones de la web y ejecuta procedimientos almacenados en SQL Server.",
+  "scripts": {
+    "start": "node index.js",
+    "conexion": "node prueba_conexion.js"
+  },
   "dependencies": {
-    "dotenv": "^18.0.7",
-    "express": "^5.3.0",
-    "express-session": "^1.19.0",
-    "mssql": "^12.7.4"
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "mssql": "^11.0.1"
   }
 }

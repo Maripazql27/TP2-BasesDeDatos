@@ -4,13 +4,17 @@ import { useState } from 'react';
 // Solo permite guardar cuando el total es exactamente 100
 // (la base de datos vuelve a validarlo).
 export default function EditorPorcentajes({ beneficiarios, onGuardar, onCancelar }) {
+      // "valores" guarda lo que el usuario va escribiendo, como texto, por id:
+  //   { 1: '60', 2: '40' }
   const [valores, setValores] = useState(
     Object.fromEntries(beneficiarios.map((b) => [b.IdBeneficiario, String(b.Porcentaje)]))
   );
 
+   // Un texto es válido si es un entero entre 0 y 100 (y no está vacío).
   const esValido = (texto) =>
     texto !== '' && Number.isInteger(Number(texto)) && Number(texto) >= 0 && Number(texto) <= 100;
 
+  // Valores calculados en cada dibujo de la pantalla:
   const todosValidos = beneficiarios.every((b) => esValido(valores[b.IdBeneficiario]));
   const total = beneficiarios.reduce(
     (suma, b) => suma + (esValido(valores[b.IdBeneficiario]) ? Number(valores[b.IdBeneficiario]) : 0),
@@ -18,10 +22,12 @@ export default function EditorPorcentajes({ beneficiarios, onGuardar, onCancelar
   );
   const puedeGuardar = todosValidos && total === 100;
 
+  // Actualiza el valor de UN beneficiario sin perder los demás.
   function cambiar(id, texto) {
     setValores({ ...valores, [id]: texto });
   }
 
+  // Entrega la lista completa, con los porcentajes ya convertidos a número.
   function guardar() {
     onGuardar(
       beneficiarios.map((b) => ({
@@ -63,6 +69,7 @@ export default function EditorPorcentajes({ beneficiarios, onGuardar, onCancelar
         </tbody>
       </table>
 
+           {/* Total en vivo: verde si es 100, rojo si no */}
       <p className={puedeGuardar ? 'mensaje-ok' : 'mensaje-error'}>
         Total: {total}% {puedeGuardar ? '' : '(debe sumar exactamente 100)'}
       </p>

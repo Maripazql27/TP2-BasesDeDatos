@@ -12,6 +12,8 @@ export default function Estados() {
   const [estados, setEstados] = useState([]);
   const [cargando, setCargando] = useState(true);
 
+
+  // Se vuelve a ejecutar si cambia la cuenta.
   useEffect(() => {
     async function cargar() {
       const respuesta = await consultarEstados(numeroCuenta);
