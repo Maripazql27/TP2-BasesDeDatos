@@ -45,6 +45,10 @@ export default function Cuentas({ usuario, onLogout }) {
             <h2>Cuenta {c.NumeroCuenta}</h2>
             <p>Tipo: {c.NombreTipoCuenta}</p>
             <p>Saldo: {formatoMoneda.format(c.Saldo)}</p>
+                        <Link to={`/cuentas/${c.NumeroCuenta}/beneficiarios`}>
+              Beneficiarios
+            </Link>
+            {' | '}
             <Link to={`/cuentas/${c.NumeroCuenta}/estados`}>
               Estados de cuenta
             </Link>

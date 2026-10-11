@@ -79,3 +79,46 @@ th {
 .fila-clic:hover {
   background: #f1f5f9;
 }
+
+
+/* Beneficiarios */
+.alerta {
+  background: #fff3cd;
+  border: 2px solid #e0a800;
+  color: #664d03;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+.mensaje-ok {
+  color: #146c2e;
+}
+.mensaje-error {
+  color: #b00020;
+}
+.formulario {
+  max-width: 480px;
+  margin-top: 16px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+select {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  box-sizing: border-box;
+}
+.botones {
+  display: flex;
+  gap: 8px;
+}
+
+
+/* Editor de porcentajes */
+.entrada-porcentaje {
+  width: 90px;
+  margin-top: 0;
+}

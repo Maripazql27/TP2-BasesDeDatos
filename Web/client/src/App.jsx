@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Cuentas from './pages/Cuentas';
 import Estados from './pages/Estados';
+import Beneficiarios from './pages/Beneficiarios';
 
 // Si no hay usuario en sesión, manda a la pantalla de login.
 function RutaProtegida({ usuario, children }) {
@@ -29,6 +30,13 @@ export default function App() {
           element={
             <RutaProtegida usuario={usuario}>
               <Estados />
+            </RutaProtegida>
+          }
+        />        <Route
+          path="/cuentas/:numeroCuenta/beneficiarios"
+          element={
+            <RutaProtegida usuario={usuario}>
+              <Beneficiarios />
             </RutaProtegida>
           }
         />
