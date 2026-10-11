@@ -1,3 +1,9 @@
+// =============================================================================
+// Estados.jsx — LISTA DE LOS ÚLTIMOS 8 ESTADOS DE CUENTA
+// Toma el número de cuenta de la URL, pide los estados con consultarEstados()
+// (real: sp_ConsultarEstadosCuenta, que devuelve máximo 8, del más reciente al
+// más antiguo, y registra la consulta en la bitácora) y los muestra en una tabla.
+// =============================================================================
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { consultarEstados } from '../api';
@@ -8,16 +14,18 @@ const formatoMoneda = new Intl.NumberFormat('es-CR', {
 });
 
 export default function Estados() {
+  // useParams lee la parte variable de la URL: /cuentas/ESTE_VALOR/estados
   const { numeroCuenta } = useParams();
   const [estados, setEstados] = useState([]);
   const [cargando, setCargando] = useState(true);
-
+  const [error, setError] = useState('');
 
   // Se vuelve a ejecutar si cambia la cuenta.
   useEffect(() => {
     async function cargar() {
       const respuesta = await consultarEstados(numeroCuenta);
       if (respuesta.ok) setEstados(respuesta.datos);
+      else setError(respuesta.mensaje); // p. ej. 50002: no tiene acceso a esa cuenta
       setCargando(false);
     }
     cargar();
@@ -31,7 +39,8 @@ export default function Estados() {
       </header>
 
       {cargando && <p>Cargando...</p>}
-      {!cargando && estados.length === 0 && <p>No hay estados de cuenta.</p>}
+      {error && <p className="error">{error}</p>}
+      {!cargando && !error && estados.length === 0 && <p>No hay estados de cuenta.</p>}
 
       {estados.length > 0 && (
         <div className="tabla-scroll">
