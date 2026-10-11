@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Cuentas from './pages/Cuentas';
+import Estados from './pages/Estados';
 
 // Si no hay usuario en sesión, manda a la pantalla de login.
 function RutaProtegida({ usuario, children }) {
@@ -20,6 +21,14 @@ export default function App() {
           element={
             <RutaProtegida usuario={usuario}>
               <Cuentas usuario={usuario} onLogout={() => setUsuario(null)} />
+            </RutaProtegida>
+          }
+        />
+                <Route
+          path="/cuentas/:numeroCuenta/estados"
+          element={
+            <RutaProtegida usuario={usuario}>
+              <Estados />
             </RutaProtegida>
           }
         />
