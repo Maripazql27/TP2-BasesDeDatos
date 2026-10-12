@@ -187,7 +187,7 @@ CREATE TABLE dbo.EstadoCuenta (
 CREATE TABLE dbo.Usuario (
     Id              INT IDENTITY(1,1) NOT NULL,
     NombreUsuario   VARCHAR(64)  NOT NULL,        -- llave alterna ("User" en el XML)
-    ClaveHash       VARBINARY(32) NOT NULL,       -- SHA2_256; confirmar que carga y login apliquen lo mismo
+    Clave VARCHAR(128) NOT NULL,       -- Contraseña en texto plano
     EsAdministrador BIT          NOT NULL CONSTRAINT DF_Usuario_Admin DEFAULT (0),
     IdPersona       INT          NOT NULL,
     CONSTRAINT PK_Usuario         PRIMARY KEY (Id),
