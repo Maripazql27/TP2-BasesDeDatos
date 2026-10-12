@@ -1,219 +1,185 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import {
-  listarBeneficiarios,
-  listarParentezcos,
-  listarTiposDocumento,
-  agregarBeneficiario,
-  actualizarBeneficiario,
-  actualizarPorcentajes,
-  eliminarBeneficiario,
-} from '../api';
-import FormularioBeneficiario from '../components/FormularioBeneficiario';
-import EditorPorcentajes from '../components/EditorPorcentajes';
+// BENEFICIARIOS Y CATÁLOGOS (solo con sesión iniciada)
+//
+//   GET    /api/catalogos/parentezcos              -> sp_ListarParentezcos
+//   GET    /api/catalogos/tipos-documento          -> sp_ListarTiposDocumento
+//   GET    /api/cuentas/:numero/beneficiarios      -> sp_ListarBeneficiarios
+//   POST   /api/cuentas/:numero/beneficiarios      -> sp_AgregarBeneficiario
+//   PUT    /api/cuentas/:numero/porcentajes        -> sp_ActualizarPorcentajes
+//   PUT    /api/beneficiarios/:id                  -> sp_ActualizarBeneficiario
+//   DELETE /api/beneficiarios/:id                  -> sp_EliminarBeneficiario
 
-// Texto exacto que pide el enunciado.
-const TEXTO_ALERTA =
-  'la suma de los porcentajes de sus beneficiarios no suma 100, favor corregir y cancelar la edición';
+import { Router } from 'express';
+import { sql } from '../db.js';
+import { exigirSesion, responderError, fechaATexto } from './comunes.js';
 
-export default function Beneficiarios() {
-  const { numeroCuenta } = useParams(); // cuenta tomada de la URL
-  const [beneficiarios, setBeneficiarios] = useState([]); // lista activa
-  const [resumen, setResumen] = useState(null);           // suma y cantidad
-  const [parentezcos, setParentezcos] = useState([]);     // catálogo
-  const [tiposDocumento, setTiposDocumento] = useState([]); // catálogo
-  const [cargando, setCargando] = useState(true);
-  const [mensaje, setMensaje] = useState(null); // { tipo: 'ok' | 'error', texto }
-  // Qué formulario está abierto: null (ninguno), 'agregar', o el beneficiario
-  // cuyos datos se editan.
-  const [formulario, setFormulario] = useState(null);
-  const [editandoPorcentajes, setEditandoPorcentajes] = useState(false);
-  // "version" es un contador: cada vez que cambia, el useEffect de abajo vuelve
-  // a consultar la lista. Es la forma de "refrescar" tras guardar un cambio.
-  const [version, setVersion] = useState(0);
-  // useRef guarda un valor que NO provoca que la pantalla se redibuje.
-  // Aquí marca "después de cargar la lista, revisa si la suma es 100".
-  // Se activa tras agregar o desactivar un beneficiario.
-  const revisarSuma = useRef(false);
+// ---- Validaciones de forma (devuelven true si el dato tiene la forma correcta)
+const esEntero = (v) => Number.isInteger(v);
+const esTexto = (v, max) => typeof v === 'string' && v.length > 0 && v.length <= max;
+const esSoloDigitos = (v, max) => esTexto(v, max) && /^[0-9]+$/.test(v);
+const esFecha = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
+const esNumeroCuenta = (v) => typeof v === 'string' && /^[0-9]{1,16}$/.test(v);
 
-// Catálogos para los desplegables (una sola vez, al abrir la pantalla).
-  useEffect(() => {
-    async function cargarCatalogos() {
-      const p = await listarParentezcos();
-      const t = await listarTiposDocumento();
-      if (p.ok) setParentezcos(p.datos);
-      if (t.ok) setTiposDocumento(t.datos);
+// Id de beneficiario que llega en la URL: entero positivo.
+function idDeUrl(texto) {
+  return /^[0-9]{1,9}$/.test(texto) ? Number(texto) : null;
+}
+
+export function crearRutasBeneficiarios(ejecutarSP) {
+  const router = Router();
+  router.use(exigirSesion);
+
+  // ---------------------------------------------------------------- catálogos
+  // Alimentan los desplegables del formulario. Devuelven [{ Id, Nombre }].
+  router.get('/catalogos/parentezcos', async (req, res, next) => {
+    try {
+      const { codigo, recordsets } = await ejecutarSP('dbo.sp_ListarParentezcos', {});
+      if (codigo !== 0) return responderError(res, codigo);
+      res.json({ ok: true, datos: recordsets[0] });
+    } catch (error) {
+      next(error);
     }
-    cargarCatalogos();
-  }, []);
+  });
 
-// Lista de beneficiarios y suma de porcentajes. Se repite si cambia la cuenta
-  // o si "version" cambia (después de guardar algo).
-  useEffect(() => {
-    async function cargar() {
-      const r = await listarBeneficiarios(numeroCuenta);
-      if (r.ok) {
-        setBeneficiarios(r.beneficiarios);
-        setResumen(r.resumen);
-        if (revisarSuma.current) {
-          revisarSuma.current = false;
-           // Si tras agregar/desactivar la suma quedó distinta de 100, se abre
-          // sola la edición de porcentajes para corregirla.
-          if (r.resumen.CantidadBeneficiarios > 0 && r.resumen.SumaPorcentajes !== 100) {
-            setEditandoPorcentajes(true);
-            setMensaje({
-              tipo: 'error',
-              texto: 'Ajuste los porcentajes de todos los beneficiarios para que sumen 100.',
-            });
-          }
-        }
+  router.get('/catalogos/tipos-documento', async (req, res, next) => {
+    try {
+      const { codigo, recordsets } = await ejecutarSP('dbo.sp_ListarTiposDocumento', {});
+      if (codigo !== 0) return responderError(res, codigo);
+      res.json({ ok: true, datos: recordsets[0] });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ------------------------------------------------------------------- listar
+  // El SP devuelve DOS consultas: 1) los beneficiarios activos y 2) una fila
+  // con la suma de porcentajes y la cantidad (la web la usa para la alerta).
+  router.get('/cuentas/:numero/beneficiarios', async (req, res, next) => {
+    try {
+      if (!esNumeroCuenta(req.params.numero)) return responderError(res, 50002);
+
+      const { codigo, recordsets } = await ejecutarSP('dbo.sp_ListarBeneficiarios', {
+        inIdUsuario: [sql.Int, req.session.idUsuario],
+        inNumeroCuenta: [sql.VarChar(16), req.params.numero],
+      });
+      if (codigo !== 0) return responderError(res, codigo);
+
+      const beneficiarios = recordsets[0].map((b) => ({
+        ...b,
+        FechaNacimiento: fechaATexto(b.FechaNacimiento),
+      }));
+      // Si no hubiera fila de resumen, se calcula: la suma de 0 beneficiarios es 0.
+      const resumen = recordsets[1]?.[0] ?? { SumaPorcentajes: 0, CantidadBeneficiarios: 0 };
+      res.json({ ok: true, beneficiarios, resumen });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ------------------------------------------------------------------ agregar
+  router.post('/cuentas/:numero/beneficiarios', async (req, res, next) => {
+    try {
+      const d = req.body ?? {};
+      const formaValida =
+        esNumeroCuenta(req.params.numero) &&
+        esEntero(d.idTipoDocuIdentidad) &&
+        esSoloDigitos(d.valorDocumentoIdentidad, 32) &&
+        esTexto(d.nombre, 64) &&
+        esFecha(d.fechaNacimiento) &&
+        esTexto(d.email, 128) &&
+        esSoloDigitos(d.telefono1, 16) &&
+        esSoloDigitos(d.telefono2, 16) &&
+        esEntero(d.idParentezco) &&
+        esEntero(d.porcentaje);
+      if (!formaValida) return responderError(res, 50007);
+
+      const { codigo } = await ejecutarSP('dbo.sp_AgregarBeneficiario', {
+        inIdUsuario: [sql.Int, req.session.idUsuario],
+        inNumeroCuenta: [sql.VarChar(16), req.params.numero],
+        inIdTipoDocuIdentidad: [sql.Int, d.idTipoDocuIdentidad],
+        inValorDocumentoIdentidad: [sql.VarChar(32), d.valorDocumentoIdentidad],
+        inNombre: [sql.VarChar(64), d.nombre],
+        inFechaNacimiento: [sql.Date, d.fechaNacimiento],
+        inEmail: [sql.VarChar(128), d.email],
+        inTelefono1: [sql.VarChar(16), d.telefono1],
+        inTelefono2: [sql.VarChar(16), d.telefono2],
+        inIdParentezco: [sql.Int, d.idParentezco],
+        inPorcentaje: [sql.Int, d.porcentaje],
+      });
+      if (codigo !== 0) return responderError(res, codigo);
+      res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ------------------------------------------------- porcentajes (todos juntos)
+  // Recibe { porcentajes: [{ idBeneficiario, porcentaje }, ...] } con TODOS los
+  // beneficiarios activos de la cuenta. Al SP se le pasa como XML (un solo
+  // parámetro), para que se guarden todos o ninguno en una sola transacción.
+  router.put('/cuentas/:numero/porcentajes', async (req, res, next) => {
+    try {
+      const lista = req.body?.porcentajes;
+      const formaValida =
+        esNumeroCuenta(req.params.numero) &&
+        Array.isArray(lista) &&
+        lista.length >= 1 &&
+        lista.length <= 3 &&
+        lista.every((x) => esEntero(x?.idBeneficiario) && esEntero(x?.porcentaje));
+      if (!formaValida) return responderError(res, 50007);
+
+      // El XML se arma SOLO con números enteros ya validados, así que no puede
+      // contener texto del usuario ni caracteres especiales de XML.
+      const xml =
+        '<p>' + lista.map((x) => `<b id="${x.idBeneficiario}" pct="${x.porcentaje}"/>`).join('') + '</p>';
+
+      const { codigo } = await ejecutarSP('dbo.sp_ActualizarPorcentajes', {
+        inIdUsuario: [sql.Int, req.session.idUsuario],
+        inNumeroCuenta: [sql.VarChar(16), req.params.numero],
+        inXml: [sql.Xml, xml],
+      });
+      if (codigo !== 0) return responderError(res, codigo);
+      res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ---------------------------------------------------- actualizar y eliminar
+  // Solo cambia nombre y parentesco; el porcentaje se cambia con la ruta de arriba.
+  router.put('/beneficiarios/:id', async (req, res, next) => {
+    try {
+      const id = idDeUrl(req.params.id);
+      const d = req.body ?? {};
+      if (id === null || !esTexto(d.nombre, 64) || !esEntero(d.idParentezco)) {
+        return responderError(res, 50007);
       }
-      setCargando(false);
+      const { codigo } = await ejecutarSP('dbo.sp_ActualizarBeneficiario', {
+        inIdUsuario: [sql.Int, req.session.idUsuario],
+        inIdBeneficiario: [sql.Int, id],
+        inNombre: [sql.VarChar(64), d.nombre],
+        inIdParentezco: [sql.Int, d.idParentezco],
+      });
+      if (codigo !== 0) return responderError(res, codigo);
+      res.json({ ok: true });
+    } catch (error) {
+      next(error);
     }
-    cargar();
-  }, [numeroCuenta, version]);
+  });
 
-  // Agregar un beneficiario nuevo o editar nombre y parentesco.
-  async function guardar(datos) {
-    const esEdicion = formulario !== 'agregar';
-    const r = esEdicion
-      ? await actualizarBeneficiario(formulario.IdBeneficiario, datos)
-      : await agregarBeneficiario(numeroCuenta, datos);
-    if (r.ok) {
-      setMensaje({ tipo: 'ok', texto: 'Cambios guardados.' });
-      setFormulario(null);
-         revisarSuma.current = !esEdicion; // al agregar, revisar la suma
-      setVersion(version + 1);          // provoca nueva consulta
-    } else {
-      // Se deja el formulario abierto para que el usuario corrija.
-      setMensaje({ tipo: 'error', texto: r.mensaje });
+  router.delete('/beneficiarios/:id', async (req, res, next) => {
+    try {
+      const id = idDeUrl(req.params.id);
+      if (id === null) return responderError(res, 50006);
+      const { codigo } = await ejecutarSP('dbo.sp_EliminarBeneficiario', {
+        inIdUsuario: [sql.Int, req.session.idUsuario],
+        inIdBeneficiario: [sql.Int, id],
+      });
+      if (codigo !== 0) return responderError(res, codigo);
+      res.json({ ok: true });
+    } catch (error) {
+      next(error);
     }
-  }
+  });
 
-  // Guardar los porcentajes de todos (todo o nada).
-  async function guardarPorcentajes(lista) {
-    const r = await actualizarPorcentajes(numeroCuenta, lista);
-    if (r.ok) {
-      setMensaje({ tipo: 'ok', texto: 'Porcentajes guardados.' });
-      setEditandoPorcentajes(false);
-      setVersion(version + 1);
-    } else {
-      setMensaje({ tipo: 'error', texto: r.mensaje });
-    }
-  }
-
-  // Desactivar (eliminación lógica) con confirmación.
-  async function desactivar(beneficiario) {
-    if (!window.confirm(`¿Desactivar a ${beneficiario.Nombre}?`)) return;
-    const r = await eliminarBeneficiario(beneficiario.IdBeneficiario);
-    if (r.ok) {
-      setMensaje({ tipo: 'ok', texto: 'Beneficiario desactivado.' });
-      revisarSuma.current = true;
-      setVersion(version + 1);
-    } else {
-      setMensaje({ tipo: 'error', texto: r.mensaje });
-    }
-  }
-
-  // Abre el formulario de agregar/editar (cierra el editor de porcentajes).
-  function abrirFormulario(valor) {
-    setMensaje(null);
-    setEditandoPorcentajes(false);
-    setFormulario(valor);
-  }
-
-  // Abre el editor de porcentajes (cierra el formulario).
-  function abrirEditorPorcentajes() {
-    setMensaje(null);
-    setFormulario(null);
-    setEditandoPorcentajes(true);
-  }
-
-// Si no hay beneficiarios la suma es 0 y también se muestra la alerta
-  const sumaIncorrecta = resumen !== null && resumen.SumaPorcentajes !== 100;
-
-  return (
-    <main className="pagina">
-      <header className="encabezado">
-        <h1>Beneficiarios de la cuenta {numeroCuenta}</h1>
-        <Link to="/cuentas">Volver a mis cuentas</Link>
-      </header>
-
-      {/* Rótulo llamativo que pide el enunciado */}
-      {sumaIncorrecta && <p className="alerta">{TEXTO_ALERTA}</p>}
-      {mensaje && <p className={mensaje.tipo === 'ok' ? 'mensaje-ok' : 'mensaje-error'}>{mensaje.texto}</p>}
-
-      {cargando && <p>Cargando...</p>}
-      {!cargando && beneficiarios.length === 0 && <p>No hay beneficiarios activos.</p>}
-
-      {/* O se muestra el editor de porcentajes, o la tabla normal con sus botones */}
-      {editandoPorcentajes ? (
-        <EditorPorcentajes
-          beneficiarios={beneficiarios}
-          onGuardar={guardarPorcentajes}
-          onCancelar={() => setEditandoPorcentajes(false)}
-        />
-      ) : (
-        <>
-          {beneficiarios.length > 0 && (
-            <div className="tabla-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Documento</th>
-                    <th>Nacimiento</th>
-                    <th>Correo</th>
-                    <th>Parentesco</th>
-                    <th>Porcentaje</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {beneficiarios.map((b) => (
-                    <tr key={b.IdBeneficiario}>
-                      <td>{b.Nombre}</td>
-                      <td>{b.ValorDocumentoIdentidad}</td>
-                      <td>{b.FechaNacimiento}</td>
-                      <td>{b.Email}</td>
-                      <td>{b.NombreParentezco}</td>
-                      <td>{b.Porcentaje}%</td>
-                      <td>
-                        <button onClick={() => abrirFormulario(b)}>Editar datos</button>{' '}
-                        <button onClick={() => desactivar(b)}>Desactivar</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {resumen && <p>Suma de porcentajes: {resumen.SumaPorcentajes}%</p>}
-
-          {formulario === null && (
-            <div className="botones">
-              {beneficiarios.length > 0 && (
-                <button onClick={abrirEditorPorcentajes}>Editar porcentajes</button>
-              )}
-              <button onClick={() => abrirFormulario('agregar')}>Agregar beneficiario</button>
-            </div>
-          )}
-
-          {formulario !== null && (
-            <FormularioBeneficiario
-              // "key" distinta por beneficiario
-              // formulario de nuevo y arrancar con los datos correctos.
-              key={formulario === 'agregar' ? 'agregar' : formulario.IdBeneficiario}
-              beneficiario={formulario === 'agregar' ? null : formulario}
-              parentezcos={parentezcos}
-              tiposDocumento={tiposDocumento}
-              onGuardar={guardar}
-              onCancelar={() => setFormulario(null)}
-            />
-          )}
-        </>
-      )}
-    </main>
-  );
+  return router;
 }

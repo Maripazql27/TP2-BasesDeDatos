@@ -1,9 +1,12 @@
 
-// app.js — arma el servidor Express (sesión + rutas + manejo de errores)
+
+// ARMA EL SERVIDOR EXPRESS (sesión + rutas + manejo de errores)
+
 import express from 'express';
 import session from 'express-session';
 import { crearRutasSesion } from './rutas/sesion.js';
 import { crearRutasCuentas } from './rutas/cuentas.js';
+import { crearRutasBeneficiarios } from './rutas/beneficiarios.js';
 
 export function crearApp(ejecutarSP, { secreto, produccion = false } = {}) {
   const app = express();
@@ -40,15 +43,17 @@ export function crearApp(ejecutarSP, { secreto, produccion = false } = {}) {
   // Rutas. Todas viven bajo /api para distinguirlas de la web.
   app.use('/api', crearRutasSesion(ejecutarSP));
   app.use('/api/cuentas', crearRutasCuentas(ejecutarSP));
+  app.use('/api', crearRutasBeneficiarios(ejecutarSP));
 
-  
+  // Cualquier otra dirección de /api que no exista responde 501 en vez de inventar datos.
   app.use('/api', (req, res) =>
     res.status(501).json({ ok: false, codigo: 50000, mensaje: 'Esta función aún no está disponible.' })
   );
 
   // Último recurso: cualquier error no previsto (por ejemplo, SQL Server caído)
   // se registra en la consola del servidor y al navegador solo se le dice un
-  // mensaje genérico. Así no se filtran detalles internos (nombres de tablas y otras cosas.).
+  // mensaje genérico. Así no se filtran detalles internos (nombres de tablas, etc.).
+  // eslint-disable-next-line no-unused-vars
   app.use((error, req, res, next) => {
     console.error('Error no controlado:', error.message);
     res.status(500).json({ ok: false, codigo: 50000, mensaje: 'Ocurrió un error inesperado.' });

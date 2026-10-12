@@ -1,7 +1,8 @@
+
+// FORMULARIO PARA AGREGAR O EDITAR UN BENEFICIARIO
+
 import { useState } from 'react';
 
-// Sirve para agregar (beneficiario = null) y para editar.
-// Al editar solo se pueden cambiar nombre, parentesco y porcentaje.
 export default function FormularioBeneficiario({
   beneficiario,
   parentezcos,
@@ -11,7 +12,7 @@ export default function FormularioBeneficiario({
 }) {
   const editando = Boolean(beneficiario);
 
-   // Todos los campos en un solo objeto de estado. Si se edita, algunos campos
+  // Todos los campos en un solo objeto de estado. Si se edita, algunos campos
   // arrancan con el valor actual del beneficiario.
   const [datos, setDatos] = useState({
     idTipoDocuIdentidad: tiposDocumento[0]?.Id ?? '',
@@ -45,6 +46,7 @@ export default function FormularioBeneficiario({
   return (
     <form className="formulario" onSubmit={enviar}>
       <h2>{editando ? 'Editar beneficiario' : 'Agregar beneficiario'}</h2>
+
       {/* Documento: solo se pide al AGREGAR (al editar no se puede cambiar) */}
       {!editando && (
         <>
@@ -69,7 +71,8 @@ export default function FormularioBeneficiario({
         Nombre
         <input name="nombre" value={datos.nombre} onChange={cambiar} maxLength={64} required />
       </label>
-      {/* Datos personales: solo al AGREGAR. Se piden 2 teléfonos*/}
+
+      {/* Datos personales: solo al AGREGAR. Se piden 2 teléfonos (el PDF exige al menos 2) */}
       {!editando && (
         <>
           <label>
@@ -104,12 +107,12 @@ export default function FormularioBeneficiario({
         </select>
       </label>
 
-       {/* Porcentaje: solo al AGREGAR. Después se cambia junto con los demás */}
-         {!editando && (
+      {/* Porcentaje: solo al AGREGAR. Después se cambia junto con los demás */}
+      {!editando && (
         <label>
-          Porcentaje (0 a 100)
+          Porcentaje (1 a 100)
           <input type="number" name="porcentaje" value={datos.porcentaje}
-            onChange={cambiar} min={0} max={100} step={1} required />
+            onChange={cambiar} min={1} max={100} step={1} required />
         </label>
       )}
 

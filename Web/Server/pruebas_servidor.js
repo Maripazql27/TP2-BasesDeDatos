@@ -1,13 +1,10 @@
-// =============================================================================
-// pruebas_servidor.js — PRUEBAS AUTOMÁTICAS DEL SERVIDOR (no necesita SQL Server)
-// Se ejecuta con:  node pruebas_servidor.js
-// Reemplaza la base de datos por una "falsa" que imita lo que devuelven los SP
-// =============================================================================
+
 import { crearApp } from './app.js';
 
 // ---- Base de datos falsa --------------------------------------------------
 const llamadas = [];                       // registro de cada SP invocado
 let fallarSiempre = false;                 // para simular SQL Server caído
+let codigoForzado = 0;                     // código que devolverán los SP de beneficiarios
 const USUARIOS = { jaguero: { id: 2, clave: 'LaFacil', admin: 0 }, fquiros: { id: 4, clave: 'Prof', admin: 1 } };
 const CUENTAS = { 2: ['11000001', '11000017'] };
 
@@ -35,6 +32,16 @@ async function ejecutarSPFalso(nombre, e) {
     return { codigo: 0, recordsets: [filas] };
   }
   if (nombre === 'dbo.sp_CerrarSesion') return { codigo: 0, recordsets: [] };
+  if (nombre === 'dbo.sp_ListarParentezcos') return { codigo: 0, recordsets: [[{ Id: 1, Nombre: 'Padre' }, { Id: 2, Nombre: 'Madre' }]] };
+  if (nombre === 'dbo.sp_ListarTiposDocumento') return { codigo: 0, recordsets: [[{ Id: 1, Nombre: 'Cedula Nacional' }]] };
+  if (nombre === 'dbo.sp_ListarBeneficiarios') {
+    return codigoForzado !== 0 ? { codigo: codigoForzado, recordsets: [] } : { codigo: 0, recordsets: [
+      [{ IdBeneficiario: 7, Nombre: 'Ana', ValorDocumentoIdentidad: '1', FechaNacimiento: new Date('1990-05-10T00:00:00Z'), Email: 'a@b.c', IdParentezco: 2, NombreParentezco: 'Madre', Porcentaje: 60 }],
+      [{ SumaPorcentajes: 60, CantidadBeneficiarios: 1 }]] };
+  }
+  if (['dbo.sp_AgregarBeneficiario', 'dbo.sp_ActualizarBeneficiario', 'dbo.sp_ActualizarPorcentajes', 'dbo.sp_EliminarBeneficiario'].includes(nombre)) {
+    return { codigo: codigoForzado, recordsets: [] };
+  }
   throw new Error('SP no previsto: ' + nombre);
 }
 
@@ -128,6 +135,76 @@ r = await pedir('GET', '/api/cuentas');
 comprobar('SQL Server caído -> 500 con mensaje genérico', r.status === 500 && r.json.mensaje === 'Ocurrió un error inesperado.');
 comprobar('el detalle interno NO llega al navegador', !JSON.stringify(r.json).includes('app_tp2'));
 fallarSiempre = false;
+
+console.log('8. Beneficiarios y catálogos');
+cookie = '';
+r = await pedir('GET', '/api/catalogos/parentezcos');
+comprobar('catálogo sin sesión -> 401', r.status === 401);
+r = await pedir('POST', '/api/login', { nombreUsuario: 'jaguero', clave: 'LaFacil' });
+r = await pedir('GET', '/api/catalogos/parentezcos');
+comprobar('parentescos -> lista { Id, Nombre }', r.status === 200 && r.json.datos[0].Nombre === 'Padre');
+r = await pedir('GET', '/api/catalogos/tipos-documento');
+comprobar('tipos de documento -> lista', r.status === 200 && r.json.datos.length === 1);
+r = await pedir('GET', '/api/cuentas/11000001/beneficiarios');
+comprobar('listar -> beneficiarios + resumen, fecha como AAAA-MM-DD', r.status === 200 && r.json.beneficiarios[0].FechaNacimiento === '1990-05-10' && r.json.resumen.SumaPorcentajes === 60);
+const antesRaro = llamadas.length;
+r = await pedir('GET', '/api/cuentas/abc/beneficiarios');
+comprobar('número de cuenta raro -> 403 sin llamar al SP', r.status === 403 && llamadas.length === antesRaro);
+
+const alta = { idTipoDocuIdentidad: 1, valorDocumentoIdentidad: '123456789', nombre: 'Luis Mora', fechaNacimiento: '1992-08-21',
+  email: 'luis@correo.com', telefono1: '88887777', telefono2: '22223333', idParentezco: 5, porcentaje: 40 };
+codigoForzado = 0;
+r = await pedir('POST', '/api/cuentas/11000001/beneficiarios', { ...alta, idUsuario: 4 });
+comprobar('agregar válido -> 200', r.status === 200 && r.json.ok);
+const sp = llamadas.at(-1);
+comprobar('el SP recibió el IdUsuario de la SESIÓN (2), no el del cuerpo (4)', sp.nombre === 'dbo.sp_AgregarBeneficiario' && sp.params.inIdUsuario === 2);
+comprobar('el SP recibió los 11 parámetros esperados', Object.keys(sp.params).length === 11 && sp.params.inPorcentaje === 40 && sp.params.inNumeroCuenta === '11000001');
+
+let n2 = llamadas.length;
+for (const [nombre, malo] of [
+  ['porcentaje como texto', { ...alta, porcentaje: '40' }],
+  ['porcentaje decimal', { ...alta, porcentaje: 40.5 }],
+  ['teléfono con letras', { ...alta, telefono1: '88a' }],
+  ['fecha mal formada', { ...alta, fechaNacimiento: '21/08/1992' }],
+  ['nombre de 65 caracteres', { ...alta, nombre: 'x'.repeat(65) }],
+  ['falta el email', { ...alta, email: undefined }],
+]) {
+  r = await pedir('POST', '/api/cuentas/11000001/beneficiarios', malo);
+  comprobar(`agregar con ${nombre} -> 400 (50007) sin llamar al SP`, r.status === 400 && r.json.codigo === 50007 && llamadas.length === n2);
+}
+
+for (const [codigo, http] of [[50003, 409], [50004, 400], [50005, 409], [50007, 400], [50008, 400], [50009, 400], [50002, 403]]) {
+  codigoForzado = codigo;
+  r = await pedir('POST', '/api/cuentas/11000001/beneficiarios', alta);
+  comprobar(`el SP devuelve ${codigo} -> HTTP ${http} con mensaje`, r.status === http && r.json.codigo === codigo && r.json.ok === false && r.json.mensaje);
+}
+codigoForzado = 0;
+
+r = await pedir('PUT', '/api/cuentas/11000001/porcentajes', { porcentajes: [{ idBeneficiario: 7, porcentaje: 70 }, { idBeneficiario: 8, porcentaje: 30 }] });
+comprobar('porcentajes en bloque -> 200', r.status === 200 && r.json.ok);
+comprobar('se envía como XML con solo números', llamadas.at(-1).params.inXml === '<p><b id="7" pct="70"/><b id="8" pct="30"/></p>');
+n2 = llamadas.length;
+r = await pedir('PUT', '/api/cuentas/11000001/porcentajes', { porcentajes: [{ idBeneficiario: '7"/><x', porcentaje: 70 }] });
+comprobar('intento de inyectar XML -> 400 sin llamar al SP', r.status === 400 && llamadas.length === n2);
+r = await pedir('PUT', '/api/cuentas/11000001/porcentajes', { porcentajes: [1, 2, 3, 4].map((i) => ({ idBeneficiario: i, porcentaje: 25 })) });
+comprobar('4 porcentajes -> 400 sin llamar al SP', r.status === 400 && llamadas.length === n2);
+r = await pedir('PUT', '/api/cuentas/11000001/porcentajes', { porcentajes: [] });
+comprobar('lista vacía -> 400 sin llamar al SP', r.status === 400 && llamadas.length === n2);
+
+r = await pedir('PUT', '/api/beneficiarios/7', { nombre: 'Ana M', idParentezco: 2 });
+comprobar('actualizar nombre y parentesco -> 200', r.status === 200 && llamadas.at(-1).params.inIdBeneficiario === 7 && llamadas.at(-1).params.inIdUsuario === 2);
+r = await pedir('PUT', '/api/beneficiarios/abc', { nombre: 'Ana', idParentezco: 2 });
+comprobar('id no numérico -> 400 sin llamar al SP', r.status === 400);
+codigoForzado = 50006;
+r = await pedir('PUT', '/api/beneficiarios/99', { nombre: 'Ana', idParentezco: 2 });
+comprobar('beneficiario inexistente (50006) -> 404', r.status === 404 && r.json.codigo === 50006);
+r = await pedir('DELETE', '/api/beneficiarios/99');
+comprobar('eliminar inexistente -> 404', r.status === 404);
+codigoForzado = 0;
+r = await pedir('DELETE', '/api/beneficiarios/7');
+comprobar('eliminar -> 200', r.status === 200 && llamadas.at(-1).nombre === 'dbo.sp_EliminarBeneficiario');
+r = await pedir('GET', '/api/ruta-que-no-existe');
+comprobar('ruta inexistente -> 501', r.status === 501);
 
 console.log(`\nResultado: ${ok} correctas, ${mal} con falla`);
 servidor.close();

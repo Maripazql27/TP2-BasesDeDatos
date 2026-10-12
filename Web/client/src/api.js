@@ -1,21 +1,29 @@
 
-// CAPA DE ACCESO A DATOS DE LA WEB
+// api.js — CAPA DE ACCESO A DATOS DE LA WEB
+// ESTADO DE LA CONEXIÓN
+//     iniciarSesion          -> POST /api/login   -> sp_IniciarSesion
+//     cerrarSesion           -> POST /api/logout  -> sp_CerrarSesion
+//     obtenerSesion          -> GET  /api/sesion  (¿quién tiene sesión?)
+//     listarCuentas          -> GET  /api/cuentas -> sp_ListarCuentasUsuario
+//     consultarEstados       -> GET  /api/cuentas/:numero/estados
+//                                                 -> sp_ConsultarEstadosCuenta
 
 
 // Mientras sea true, las funciones de BENEFICIARIOS salen de datos falsos
-// guardados en este archivo. Se cambia a false cuando esos SP y sus rutas
-// del servidor estén listos.
+// guardados en este archivo. Cuando los SP de beneficiarios de Persona 1 estén
+// instalados, se cambia a false: las mismas funciones pasan a llamar al
+// servidor (rutas/beneficiarios.js) sin tocar ninguna pantalla.
 const USAR_MOCK_BENEFICIARIOS = true;
 
 // Simula la demora de una petición real (milisegundos) para ver "Cargando...".
 const esperar = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
 
 
+
 // Hace UNA petición al servidor y siempre devuelve un objeto { ok, ... }.
-//   - Usa direcciones relativas ('/api/...'), así que si la web y el servidor creen que hablan con un solo sitio,
-//     la cookie de sesión viaja sola (credentials: 'same-origin').
-//   - Si el servidor no responde (apagado, sin red), no lanza error: devuelve
-//     { ok:false, codigo:50000, mensaje } para que la pantalla lo muestre.
+//   - Usa direcciones relativas ('/api/...'): en desarrollo, Vite las reenvía
+//     al servidor Express (ver "proxy" en vite.config.js). Como el navegador
+//     cree que habla con un solo sitio, la cookie de sesión viaja sola.
 //   - Si el servidor no responde (apagado, sin red), no lanza error: devuelve
 //     { ok:false, codigo:50000, mensaje } para que la pantalla lo muestre.
 async function pedir(metodo, ruta, cuerpo) {
@@ -46,19 +54,19 @@ export function cerrarSesion() {
 }
 
 // Pregunta al servidor si ya hay una sesión abierta. Se usa al cargar la página
-// para que recargar (F5) no obligue a iniciar sesión otra vez.
+// para que recargar no obligue a iniciar sesión otra vez.
 export function obtenerSesion() {
   return pedir('GET', '/api/sesion');
 }
 
-// Cuentas del usuario con sesión (sp_ListarCuentasUsuario). El Id del usuario
+// Cuentas del usuario con sesión. El Id del usuario
 // NO se envía: el servidor lo toma de la sesión.
 export function listarCuentas() {
   return pedir('GET', '/api/cuentas');
 }
 
 // Hasta 8 estados de cuenta, del más reciente al más antiguo
-// (sp_ConsultarEstadosCuenta). encodeURIComponent protege la dirección si el
+// encodeURIComponent protege la dirección si el
 // número trajera caracteres raros.
 export function consultarEstados(numeroCuenta) {
   return pedir('GET', `/api/cuentas/${encodeURIComponent(numeroCuenta)}/estados`);
@@ -71,7 +79,7 @@ const MENSAJES = {
   50000: 'Ocurrió un error inesperado.',
   50002: 'No tiene acceso a esta cuenta.',
   50003: 'La cuenta ya tiene 3 beneficiarios activos.',
-  50004: 'El porcentaje debe ser un entero entre 0 y 100.',
+  50004: 'El porcentaje debe ser un entero entre 1 y 100.',
   50005: 'Esa persona ya es beneficiaria activa de esta cuenta.',
   50006: 'El beneficiario no existe o ya está inactivo.',
   50007: 'Hay datos inválidos. Revise el formulario.',
@@ -125,7 +133,7 @@ const activosDe = (numeroCuenta) =>
 // --- Validaciones ---
 // En el sistema real las hace el SP (la base de datos es la que manda);
 // aquí se copian para que el simulador responda igual que el real.
-const porcentajeValido = (p) => Number.isInteger(p) && p >= 0 && p <= 100;
+const porcentajeValido = (p) => Number.isInteger(p) && p >= 1 && p <= 100;
 
 function validarNombreParentesco(d) {
   if (!d.nombre || d.nombre.length > 64) return 50007;
@@ -145,6 +153,7 @@ function validarAlta(d) {
 
 // Real: sp_ListarParentezcos (para el desplegable de parentesco).
 export async function listarParentezcos() {
+  if (!USAR_MOCK_BENEFICIARIOS) return pedir('GET', '/api/catalogos/parentezcos');
   if (USAR_MOCK_BENEFICIARIOS) {
     await esperar(100);
     return { ok: true, datos: PARENTEZCOS };
@@ -153,17 +162,21 @@ export async function listarParentezcos() {
 
 // Real: sp_ListarTiposDocumento (para el desplegable de tipo de documento).
 export async function listarTiposDocumento() {
+  if (!USAR_MOCK_BENEFICIARIOS) return pedir('GET', '/api/catalogos/tipos-documento');
   if (USAR_MOCK_BENEFICIARIOS) {
     await esperar(100);
     return { ok: true, datos: TIPOS_DOCUMENTO };
   }
 }
 
-// Real: sp_ListarBeneficiarios. Devuelve lo mismo que sus DOS consultas:
+// Devuelve lo mismo que sus DOS consultas:
 //   1) la lista de beneficiarios activos       -> "beneficiarios"
 //   2) una fila con la suma y la cantidad      -> "resumen"
 // La suma se devuelve aunque no haya beneficiarios (0), para la alerta.
 export async function listarBeneficiarios(numeroCuenta) {
+  if (!USAR_MOCK_BENEFICIARIOS) {
+    return pedir('GET', `/api/cuentas/${encodeURIComponent(numeroCuenta)}/beneficiarios`);
+  }
   if (USAR_MOCK_BENEFICIARIOS) {
     await esperar(200);
     const activos = activosDe(numeroCuenta);
@@ -185,9 +198,12 @@ export async function listarBeneficiarios(numeroCuenta) {
   }
 }
 
-// Real: sp_AgregarBeneficiario. Se valida en este orden y se devuelve
+// Se valida en este orden y se devuelve
 // el primer error encontrado.
 export async function agregarBeneficiario(numeroCuenta, d) {
+  if (!USAR_MOCK_BENEFICIARIOS) {
+    return pedir('POST', `/api/cuentas/${encodeURIComponent(numeroCuenta)}/beneficiarios`, d);
+  }
   if (USAR_MOCK_BENEFICIARIOS) {
     await esperar(200);
     let codigo = validarNombreParentesco(d);
@@ -214,9 +230,12 @@ export async function agregarBeneficiario(numeroCuenta, d) {
   }
 }
 
-// Real: sp_ActualizarBeneficiario. Solo cambia nombre y parentesco.
+// Solo cambia nombre y parentesco.
 // El porcentaje se cambia con actualizarPorcentajes (todos a la vez).
 export async function actualizarBeneficiario(idBeneficiario, d) {
+  if (!USAR_MOCK_BENEFICIARIOS) {
+    return pedir('PUT', `/api/beneficiarios/${encodeURIComponent(idBeneficiario)}`, d);
+  }
   if (USAR_MOCK_BENEFICIARIOS) {
     await esperar(200);
     const b = beneficiariosMock.find((x) => x.IdBeneficiario === idBeneficiario && x.Activo);
@@ -229,11 +248,14 @@ export async function actualizarBeneficiario(idBeneficiario, d) {
   }
 }
 
-// Real: sp_ActualizarPorcentajes (propuesto, pendiente de aprobar por el grupo).
+
 // Recibe los porcentajes de TODOS los beneficiarios activos de la cuenta:
 // [{ idBeneficiario, porcentaje }]. Deben sumar 100. O se guardan todos
 // o no se guarda ninguno (en SQL Server será una transacción).
 export async function actualizarPorcentajes(numeroCuenta, lista) {
+  if (!USAR_MOCK_BENEFICIARIOS) {
+    return pedir('PUT', `/api/cuentas/${encodeURIComponent(numeroCuenta)}/porcentajes`, { porcentajes: lista });
+  }
   if (USAR_MOCK_BENEFICIARIOS) {
     await esperar(200);
     const activos = activosDe(numeroCuenta);
@@ -256,6 +278,9 @@ export async function actualizarPorcentajes(numeroCuenta, lista) {
 // Real: sp_EliminarBeneficiario. Eliminación LÓGICA: el registro no se borra,
 // se marca como inactivo (en la BD: FlagActivo = 0 y FechaDesactivacion).
 export async function eliminarBeneficiario(idBeneficiario) {
+  if (!USAR_MOCK_BENEFICIARIOS) {
+    return pedir('DELETE', `/api/beneficiarios/${encodeURIComponent(idBeneficiario)}`);
+  }
   if (USAR_MOCK_BENEFICIARIOS) {
     await esperar(200);
     const b = beneficiariosMock.find((x) => x.IdBeneficiario === idBeneficiario && x.Activo);
