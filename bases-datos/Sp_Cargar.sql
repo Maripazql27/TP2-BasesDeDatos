@@ -2,9 +2,6 @@
 USE CuentaAhorrosTP2;
 GO
 
--- Procedimiento para cargar los catalogos desde XML.
-
-
 /*
 Ejemplo de ejecucion:
 
@@ -16,22 +13,22 @@ EXEC dbo.sp_CargarCatalogos
 SELECT @outResultCode AS CodigoResultado;
 */
 
+-------------------------------------------------------------------------------------------
 CREATE PROCEDURE dbo.sp_CargarCatalogos
     @inXml XML,
     @outResultCode INT OUTPUT
-
 AS
 BEGIN
+    SET NOCOUNT ON;
 
-
-    -- Verificar que se recibio un XML.
+    -- ver si se recibio un XML.
     IF @inXml IS NULL
     BEGIN
         SET @outResultCode = 50007;
         RETURN;
     END;
 
-    -- Verificar que existan los cinco catalogos.
+    -- ver si existen los cinco catalogos.
     IF NOT EXISTS (
         SELECT 1
         FROM @inXml.nodes(
@@ -72,125 +69,105 @@ BEGIN
         -- Iniciar la transaccion.
         BEGIN TRANSACTION;
 
+        -- Cargar los tipos de documento.
+        INSERT INTO dbo.TipoDocuIdentidad (Id, Nombre)
+        SELECT
+            T.Nodo.value('@Id', 'INT'),
+            T.Nodo.value('@Nombre', 'VARCHAR(64)')
+        FROM @inXml.nodes(
+            '/Catalogos/Tipo_Doc/TipoDocuIdentidad'
+        ) AS T(Nodo);
 
-
-    -- Cargar los tipos de documento.
-    INSERT INTO dbo.TipoDocuIdentidad (Id, Nombre)
-    SELECT
-        T.Nodo.value('@Id', 'INT'),
-        T.Nodo.value('@Nombre', 'VARCHAR(64)')
-    FROM @inXml.nodes(
-        '/Catalogos/Tipo_Doc/TipoDocuIdentidad'
-    ) AS T(Nodo);
-
-
+        -- Cargar los tipos de moneda.
+        INSERT INTO dbo.TipoMoneda (Id, Nombre, Simbolo)
+        SELECT
+            T.Nodo.value('@Id', 'INT'),
+            T.Nodo.value('@Nombre', 'VARCHAR(32)'),
+            T.Nodo.value('@Simbolo', 'NVARCHAR(4)')
+        FROM @inXml.nodes(
+            '/Catalogos/Tipo_Moneda/TipoMoneda'
+        ) AS T(Nodo);
     
-    -- Cargar los tipos de moneda.
-    INSERT INTO dbo.TipoMoneda (Id, Nombre, Simbolo)
-    SELECT
-        T.Nodo.value('@Id', 'INT'),
-        T.Nodo.value('@Nombre', 'VARCHAR(32)'),
-        T.Nodo.value('@Simbolo', 'NVARCHAR(4)')
-    FROM @inXml.nodes(
-        '/Catalogos/Tipo_Moneda/TipoMoneda'
-    ) AS T(Nodo);
-
-
+        -- Cargar los parentescos.
+        INSERT INTO dbo.Parentezco (Id, Nombre)
+        SELECT
+            T.Nodo.value('@Id', 'INT'),
+            T.Nodo.value('@Nombre', 'VARCHAR(32)')
+        FROM @inXml.nodes(
+            '/Catalogos/Parentezcos/Parentezco'
+        ) AS T(Nodo);
     
-    -- Cargar los parentescos.
-    INSERT INTO dbo.Parentezco (Id, Nombre)
-    SELECT
-        T.Nodo.value('@Id', 'INT'),
-        T.Nodo.value('@Nombre', 'VARCHAR(32)')
-    FROM @inXml.nodes(
-        '/Catalogos/Parentezcos/Parentezco'
-    ) AS T(Nodo);
-
-
+        -- Cargar los tipos de cuentas de ahorro.
+        INSERT INTO dbo.TipoCuentaAhorro (
+            Id,
+            Nombre,
+            IdTipoMoneda,
+            SaldoMinimo,
+            MultaSaldoMin,
+            CargoAnual,
+            NumRetirosHumano,
+            NumRetirosAutomatico,
+            ComisionHumano,
+            ComisionAutomatico,
+            Interes
+        )
+        SELECT
+            T.Nodo.value('@Id', 'INT'),
+            T.Nodo.value('@Nombre', 'VARCHAR(64)'),
+            T.Nodo.value('@IdTipoMoneda', 'INT'),
+            T.Nodo.value('@SaldoMinimo', 'DECIMAL(18,2)'),
+            T.Nodo.value('@MultaSaldoMin', 'DECIMAL(18,2)'),
+            T.Nodo.value('@CargoAnual', 'DECIMAL(18,2)'),
+            T.Nodo.value('@NumRetirosHumano', 'INT'),
+            T.Nodo.value('@NumRetirosAutomatico', 'INT'),
+            T.Nodo.value('@comisionHumano', 'DECIMAL(18,2)'),
+            T.Nodo.value('@comisionAutomatico', 'DECIMAL(18,2)'),
+            T.Nodo.value('@interes', 'DECIMAL(5,2)')
+        FROM @inXml.nodes(
+            '/Catalogos/Tipo_Cuenta_Ahorros/TipoCuentaAhorro'
+        ) AS T(Nodo);
     
-    -- Cargar los tipos de cuentas de ahorro.
-    INSERT INTO dbo.TipoCuentaAhorro (
-        Id,
-        Nombre,
-        IdTipoMoneda,
-        SaldoMinimo,
-        MultaSaldoMin,
-        CargoAnual,
-        NumRetirosHumano,
-        NumRetirosAutomatico,
-        ComisionHumano,
-        ComisionAutomatico,
-        Interes
-    )
-    SELECT
-        T.Nodo.value('@Id', 'INT'),
-        T.Nodo.value('@Nombre', 'VARCHAR(64)'),
-        T.Nodo.value('@IdTipoMoneda', 'INT'),
-        T.Nodo.value('@SaldoMinimo', 'DECIMAL(18,2)'),
-        T.Nodo.value('@MultaSaldoMin', 'DECIMAL(18,2)'),
-        T.Nodo.value('@CargoAnual', 'DECIMAL(18,2)'),
-        T.Nodo.value('@NumRetirosHumano', 'INT'),
-        T.Nodo.value('@NumRetirosAutomatico', 'INT'),
-        T.Nodo.value('@comisionHumano', 'DECIMAL(18,2)'),
-        T.Nodo.value('@comisionAutomatico', 'DECIMAL(18,2)'),
-        T.Nodo.value('@interes', 'DECIMAL(5,2)')
-    FROM @inXml.nodes(
-        '/Catalogos/Tipo_Cuenta_Ahorros/TipoCuentaAhorro'
-    ) AS T(Nodo);
+        -- Carga los tipos de operaciones de bitacora
+        INSERT INTO dbo.TipoOperacionBitacora (Id, Nombre)
+        SELECT
+            T.Nodo.value('@id', 'INT'),
+            T.Nodo.value('@nombre', 'VARCHAR(64)')
+        FROM @inXml.nodes(
+            '/Catalogos/TipoOperacionesBitacora/TipoOperacion'
+        ) AS T(Nodo);
 
-
-    
-    -- Cargar los tipos de operaciones de bitacora.
-    INSERT INTO dbo.TipoOperacionBitacora (Id, Nombre)
-    SELECT
-        T.Nodo.value('@id', 'INT'),
-        T.Nodo.value('@nombre', 'VARCHAR(64)')
-    FROM @inXml.nodes(
-        '/Catalogos/TipoOperacionesBitacora/TipoOperacion'
-    ) AS T(Nodo);
-
-
-
-        -- Confirmar los cambios.
+        -- Confirma los cambios
         COMMIT TRANSACTION;
-
         SET @outResultCode = 0;
-
     END TRY
-
-
     BEGIN CATCH
 
-        -- Deshacer los cambios si hay una transaccion abierta.
+        -- Deshace los cambios si hay una transaccion abierta
         IF @@TRANCOUNT > 0
         BEGIN
             ROLLBACK TRANSACTION;
         END;
-
         SET @outResultCode = 50000;
-
     END CATCH
-
 END;
 GO
 
 
+--------------------------------------------------------------------------------
 -- Procedimiento para cargar las entidades desde XML.
--- EN CONSTRUCCION: no ejecutar todavia.
-
 CREATE PROCEDURE dbo.sp_CargarNoCatalogos
     @inXml XML,
     @outResultCode INT OUTPUT
 AS
 BEGIN
+    SET NOCOUNT ON;
     IF @inXml IS NULL
     BEGIN
         SET @outResultCode = 50007;
         RETURN;
     END;
 
-    
-    -- Verificar que existan las seis secciones del XML.
+    -- Ver si que existen las seis secciones del XML.
     IF NOT EXISTS (
         SELECT 1
         FROM @inXml.nodes(
@@ -232,11 +209,10 @@ BEGIN
         RETURN;
     END;
 
-
     BEGIN TRY
         BEGIN TRANSACTION;
 
-        -- Cargar las personas.
+        -- Cargar las personas
         INSERT INTO dbo.Persona (
             IdTipoDocuIdentidad,
             Nombre,
@@ -255,7 +231,7 @@ BEGIN
         ) AS T(Nodo);
 
 
-        -- Cargar el primer telefono de cada persona.
+        -- Cargar el primer telefono de cada persona
         INSERT INTO dbo.Telefono (IdPersona, Numero)
         SELECT
             P.Id,
@@ -267,7 +243,8 @@ BEGIN
             ON P.ValorDocumentoIdentidad =
                T.Nodo.value('@ValorDocumentoIdentidad', 'VARCHAR(32)');
 
-        -- Cargar el segundo telefono de cada persona.
+
+        -- Cargar el segundo telefono de cada persona
         INSERT INTO dbo.Telefono (IdPersona, Numero)
         SELECT
             P.Id,
@@ -280,8 +257,7 @@ BEGIN
                T.Nodo.value('@ValorDocumentoIdentidad', 'VARCHAR(32)');
 
 
-               
-        -- Cargar las cuentas bancarias.
+        -- Cargar las cuentas bancarias
         INSERT INTO dbo.Cuenta (
             IdPersona,
             IdTipoCuentaAhorro,
@@ -302,7 +278,6 @@ BEGIN
             ON P.ValorDocumentoIdentidad =
                T.Nodo.value('@ValorDocumentoIdentidadDelCliente',
                             'VARCHAR(32)');
-
 
         
         -- Cargar los beneficiarios de cada cuenta.
@@ -328,8 +303,7 @@ BEGIN
                T.Nodo.value('@ValorDocumentoIdentidadBeneficiario',
                             'VARCHAR(32)');
 
-
-        
+       
         -- Cargar los estados de cuenta.
         INSERT INTO dbo.EstadoCuenta (
             IdCuenta,
@@ -364,7 +338,7 @@ BEGIN
                T.Nodo.value('@NumeroCuenta', 'VARCHAR(16)');
 
 
-                -- Cargar los usuarios.
+        -- Cargar los usuarios.
         INSERT INTO dbo.Usuario (
             NombreUsuario,
             Clave,
@@ -382,7 +356,6 @@ BEGIN
         INNER JOIN dbo.Persona P
             ON P.ValorDocumentoIdentidad =
                T.Nodo.value('@ValorDocId', 'VARCHAR(32)');
-
 
         
         -- Cargar los permisos de acceso a cuentas.
@@ -404,6 +377,7 @@ BEGIN
                T.Nodo.value('@NumeroCuenta', 'VARCHAR(16)');
 
         
+
         -- Comprobar que se cargaron todos los registros del XML.
         IF (SELECT COUNT(*) FROM dbo.Persona) <>
            (SELECT COUNT(*)
@@ -438,8 +412,6 @@ BEGIN
             SET @outResultCode = 50007;
             RETURN;
         END;
-
-
 
 
         COMMIT TRANSACTION;
