@@ -1,0 +1,124 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f3f4f6;
+  margin: 0;
+}
+.tarjeta {
+  max-width: 420px;
+  margin: 60px auto;
+  padding: 24px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+label {
+  display: block;
+  margin-bottom: 12px;
+}
+input {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  box-sizing: border-box;
+}
+button {
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.error {
+  color: #b00020;
+}
+
+
+/* Páginas con contenido ancho (cuentas y estados) */
+.pagina {
+  max-width: 1100px;
+  margin: 30px auto;
+  padding: 0 16px;
+}
+.encabezado {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.tarjeta-cuenta {
+  background: #fff;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+.tabla-scroll {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+th,
+td {
+  border: 1px solid #d0d0d0;
+  padding: 6px 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+th {
+  background: #e6f1fb;
+}
+.fila-clic {
+  cursor: pointer;
+}
+.fila-clic:hover {
+  background: #f1f5f9;
+}
+
+
+/* Beneficiarios */
+.alerta {
+  background: #fff3cd;
+  border: 2px solid #e0a800;
+  color: #664d03;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+.mensaje-ok {
+  color: #146c2e;
+}
+.mensaje-error {
+  color: #b00020;
+}
+.formulario {
+  max-width: 480px;
+  margin-top: 16px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+select {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  box-sizing: border-box;
+}
+.botones {
+  display: flex;
+  gap: 8px;
+}
+
+
+/* Editor de porcentajes */
+.entrada-porcentaje {
+  width: 90px;
+  margin-top: 0;
+}
