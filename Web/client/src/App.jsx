@@ -1,16 +1,6 @@
-// =============================================================================
+
 // App.jsx — COMPONENTE RAÍZ: define las rutas (URLs) y quién tiene sesión.
-//
-// Rutas:
-//   /login                                  -> Login
-//   /cuentas                                -> Cuentas
-//   /cuentas/:numeroCuenta/estados          -> Estados
-//   /cuentas/:numeroCuenta/beneficiarios    -> Beneficiarios
-// Las tres últimas están protegidas: sin sesión, redirigen al login.
-//
-// OJO: la protección de aquí es solo VISUAL (comodidad). La seguridad real
-// está en el servidor (sesión) y en los SP (validan el acceso a la cuenta).
-// =============================================================================
+
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/login';

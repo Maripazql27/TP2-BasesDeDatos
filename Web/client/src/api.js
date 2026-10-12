@@ -7,12 +7,6 @@
 //     listarCuentas          -> GET  /api/cuentas -> sp_ListarCuentasUsuario
 //     consultarEstados       -> GET  /api/cuentas/:numero/estados
 //                                                 -> sp_ConsultarEstadosCuenta
-
-
-// Mientras sea true, las funciones de BENEFICIARIOS salen de datos falsos
-// guardados en este archivo. Cuando los SP de beneficiarios de Persona 1 estén
-// instalados, se cambia a false: las mismas funciones pasan a llamar al
-// servidor (rutas/beneficiarios.js) sin tocar ninguna pantalla.
 const USAR_MOCK_BENEFICIARIOS = true;
 
 // Simula la demora de una petición real (milisegundos) para ver "Cargando...".
