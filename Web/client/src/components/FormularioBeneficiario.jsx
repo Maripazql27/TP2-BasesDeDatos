@@ -1,4 +1,3 @@
-
 // FORMULARIO PARA AGREGAR O EDITAR UN BENEFICIARIO
 
 import { useState } from 'react';
@@ -7,6 +6,7 @@ export default function FormularioBeneficiario({
   beneficiario,
   parentezcos,
   tiposDocumento,
+  otros = [], // beneficiarios activos actuales (solo se usa al AGREGAR, para hacerles espacio)
   onGuardar,
   onCancelar,
 }) {
@@ -26,6 +26,19 @@ export default function FormularioBeneficiario({
     porcentaje: beneficiario?.Porcentaje ?? '',
   });
 
+  // Al AGREGAR, la suma de todos los porcentajes no puede pasar de 100 (lo exige el SP).
+  // Si los beneficiarios actuales ya suman 100, el usuario baja aquí los porcentajes de
+  // ellos para dejar espacio al nuevo. Se guardan como texto, por id: { 7: '50', 8: '50' }.
+  const [ajustes, setAjustes] = useState(
+    Object.fromEntries(otros.map((b) => [b.IdBeneficiario, String(b.Porcentaje)]))
+  );
+  const esPorcentaje = (texto) =>
+    texto !== '' && Number.isInteger(Number(texto)) && Number(texto) >= 1 && Number(texto) <= 100;
+  const ajustesValidos = otros.every((b) => esPorcentaje(ajustes[b.IdBeneficiario]));
+  const totalOtros = otros.reduce((suma, b) => suma + (esPorcentaje(ajustes[b.IdBeneficiario]) ? Number(ajustes[b.IdBeneficiario]) : 0), 0);
+  const totalConNuevo = totalOtros + (Number.isInteger(Number(datos.porcentaje)) ? Number(datos.porcentaje) : 0);
+  const sumaPasa100 = !editando && totalConNuevo > 100;
+
   // Un solo manejador para todos los campos: usa el atributo "name" del
   // campo para saber cuál propiedad del estado actualizar.
   function cambiar(evento) {
@@ -40,6 +53,10 @@ export default function FormularioBeneficiario({
       idTipoDocuIdentidad: Number(datos.idTipoDocuIdentidad),
       idParentezco: Number(datos.idParentezco),
       porcentaje: Number(datos.porcentaje),
+      // Al AGREGAR: porcentajes (nuevos o iguales) de los beneficiarios actuales, para hacerles espacio.
+      ...(editando
+        ? {}
+        : { ajustes: otros.map((b) => ({ idBeneficiario: b.IdBeneficiario, porcentaje: Number(ajustes[b.IdBeneficiario]) })) }),
     });
   }
 
@@ -83,7 +100,8 @@ export default function FormularioBeneficiario({
           <label>
             Correo electrónico
             <input type="email" name="email" value={datos.email}
-              onChange={cambiar} maxLength={128} required />
+              onChange={cambiar} maxLength={128} required
+              pattern=".+@.+\..+" title="Debe tener la forma nombre@dominio.com" />
           </label>
           <label>
             Teléfono 1
@@ -116,8 +134,27 @@ export default function FormularioBeneficiario({
         </label>
       )}
 
+      {/* Solo al AGREGAR y si ya hay beneficiarios: permite bajar sus porcentajes para dejar espacio */}
+      {!editando && otros.length > 0 && (
+        <fieldset>
+          <legend>Porcentajes de los beneficiarios actuales</legend>
+          <p>La suma de todos no puede pasar de 100. Si ya suman 100, baje alguno para dejar espacio al nuevo.</p>
+          {otros.map((b) => (
+            <label key={b.IdBeneficiario}>
+              {b.Nombre} ({b.NombreParentezco})
+              <input className="entrada-porcentaje" type="number" min={1} max={100} step={1}
+                value={ajustes[b.IdBeneficiario]}
+                onChange={(e) => setAjustes({ ...ajustes, [b.IdBeneficiario]: e.target.value })} />
+            </label>
+          ))}
+          <p className={sumaPasa100 ? 'mensaje-error' : 'mensaje-ok'}>
+            Total con el nuevo: {totalConNuevo}% {sumaPasa100 && '(no puede superar 100)'}
+          </p>
+        </fieldset>
+      )}
+
       <div className="botones">
-        <button type="submit">Guardar</button>
+        <button type="submit" disabled={sumaPasa100 || !ajustesValidos}>Guardar</button>
         <button type="button" onClick={onCancelar}>Cancelar</button>
       </div>
     </form>

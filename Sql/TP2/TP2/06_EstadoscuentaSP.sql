@@ -133,4 +133,9 @@ GO
 
 
 
+
 -- SELECT TOP 10 * FROM dbo.Bitacora ORDER BY 1 DESC; --prueba y check de la bitacora
+
+USE CuentaAhorrosTP2;   
+GO
+-- SELECT TOP 25 * FROM dbo.Bitacora ORDER BY Id DESC
