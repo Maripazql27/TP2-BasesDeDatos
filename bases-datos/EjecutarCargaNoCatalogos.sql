@@ -686,7 +686,4 @@ EXEC dbo.sp_CargarNoCatalogos
 SELECT @outResultCode AS CodigoResultado;
 GO
 
-IF @@TRANCOUNT > 0
-    ROLLBACK TRANSACTION;
-
 SELECT @@TRANCOUNT AS TransaccionesAbiertas;
