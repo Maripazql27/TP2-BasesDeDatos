@@ -1,11 +1,10 @@
-
 // rutas/beneficiarios.js — BENEFICIARIOS Y CATÁLOGOS (solo con sesión iniciada)
 //
 //   GET    /api/catalogos/parentezcos              -> sp_ListarParentezcos
 //   GET    /api/catalogos/tipos-documento          -> sp_ListarTiposDocumento
 //   GET    /api/cuentas/:numero/beneficiarios      -> sp_ListarBeneficiarios
 //   POST   /api/cuentas/:numero/beneficiarios      -> sp_AgregarBeneficiario
-//   PUT    /api/cuentas/:numero/porcentajes        -> sp_ActualizarPorcentajes
+//   PUT    /api/cuentas/:numero/porcentajes        -> sp_ListarBeneficiarios + sp_ActualizarBeneficiario (uno por beneficiario)
 //   PUT    /api/beneficiarios/:id                  -> sp_ActualizarBeneficiario
 //   DELETE /api/beneficiarios/:id                  -> sp_EliminarBeneficiario
 import { Router } from 'express';
@@ -32,7 +31,7 @@ export function crearRutasBeneficiarios(ejecutarSP) {
   // Alimentan los desplegables del formulario. Devuelven [{ Id, Nombre }].
   router.get('/catalogos/parentezcos', async (req, res, next) => {
     try {
-      const { codigo, recordsets } = await ejecutarSP('dbo.sp_ListarParentezcos', {});  // check: nombre del SP
+      const { codigo, recordsets } = await ejecutarSP('dbo.sp_ListarParentezcos', {});
       if (codigo !== 0) return responderError(res, codigo);
       res.json({ ok: true, datos: recordsets[0] });
     } catch (error) {
@@ -42,7 +41,7 @@ export function crearRutasBeneficiarios(ejecutarSP) {
 
   router.get('/catalogos/tipos-documento', async (req, res, next) => {
     try {
-      const { codigo, recordsets } = await ejecutarSP('dbo.sp_ListarTiposDocumento', {});  // check: nombre del SP
+      const { codigo, recordsets } = await ejecutarSP('dbo.sp_ListarTiposDocumento', {});
       if (codigo !== 0) return responderError(res, codigo);
       res.json({ ok: true, datos: recordsets[0] });
     } catch (error) {
@@ -57,18 +56,18 @@ export function crearRutasBeneficiarios(ejecutarSP) {
     try {
       if (!esNumeroCuenta(req.params.numero)) return responderError(res, 50002);
 
-      const { codigo, recordsets } = await ejecutarSP('dbo.sp_ListarBeneficiarios', {  // check: nombre del SP
-        inIdUsuario: [sql.Int, req.session.idUsuario],  // check
-        inNumeroCuenta: [sql.VarChar(16), req.params.numero],  // check
+      const { codigo, recordsets } = await ejecutarSP('dbo.sp_ListarBeneficiarios', {
+        inIdUsuario: [sql.Int, req.session.idUsuario],
+        inNumeroCuenta: [sql.VarChar(16), req.params.numero],
       });
       if (codigo !== 0) return responderError(res, codigo);
 
       const beneficiarios = recordsets[0].map((b) => ({
         ...b,
-        FechaNacimiento: fechaATexto(b.FechaNacimiento),  // check: columna FechaNacimiento
+        FechaNacimiento: fechaATexto(b.FechaNacimiento),
       }));
       // Si no hubiera fila de resumen, se calcula: la suma de 0 beneficiarios es 0.
-      const resumen = recordsets[1]?.[0] ?? { SumaPorcentajes: 0, CantidadBeneficiarios: 0 };  // check: 2.a consulta del SP con SumaPorcentajes y CantidadBeneficiarios
+      const resumen = recordsets[1]?.[0] ?? { SumaPorcentajes: 0, CantidadBeneficiarios: 0 };
       res.json({ ok: true, beneficiarios, resumen });
     } catch (error) {
       next(error);
@@ -92,18 +91,18 @@ export function crearRutasBeneficiarios(ejecutarSP) {
         esEntero(d.porcentaje);
       if (!formaValida) return responderError(res, 50007);
 
-      const { codigo } = await ejecutarSP('dbo.sp_AgregarBeneficiario', {  // check: nombre del SP
-        inIdUsuario: [sql.Int, req.session.idUsuario],  // check
-        inNumeroCuenta: [sql.VarChar(16), req.params.numero],  // check
-        inIdTipoDocuIdentidad: [sql.Int, d.idTipoDocuIdentidad],  // check
-        inValorDocumentoIdentidad: [sql.VarChar(32), d.valorDocumentoIdentidad],  // check
-        inNombre: [sql.VarChar(64), d.nombre],  // check
-        inFechaNacimiento: [sql.Date, d.fechaNacimiento],  // check
-        inEmail: [sql.VarChar(128), d.email],  // check
-        inTelefono1: [sql.VarChar(16), d.telefono1],  // check
-        inTelefono2: [sql.VarChar(16), d.telefono2],  // check
-        inIdParentezco: [sql.Int, d.idParentezco],  // check
-        inPorcentaje: [sql.Int, d.porcentaje],  // check
+      const { codigo } = await ejecutarSP('dbo.sp_AgregarBeneficiario', {
+        inIdUsuario: [sql.Int, req.session.idUsuario],
+        inNumeroCuenta: [sql.VarChar(16), req.params.numero],
+        inIdTipoDocuIdentidad: [sql.Int, d.idTipoDocuIdentidad],
+        inValorDocumentoIdentidad: [sql.VarChar(32), d.valorDocumentoIdentidad],
+        inNombre: [sql.VarChar(64), d.nombre],
+        inFechaNacimiento: [sql.Date, d.fechaNacimiento],
+        inEmail: [sql.VarChar(128), d.email],
+        inTelefono1: [sql.VarChar(16), d.telefono1],
+        inTelefono2: [sql.VarChar(16), d.telefono2],
+        inIdParentezco: [sql.Int, d.idParentezco],
+        inPorcentaje: [sql.Int, d.porcentaje],
       });
       if (codigo !== 0) return responderError(res, codigo);
       res.json({ ok: true });
@@ -114,8 +113,16 @@ export function crearRutasBeneficiarios(ejecutarSP) {
 
   // ------------------------------------------------- porcentajes (todos juntos)
   // Recibe { porcentajes: [{ idBeneficiario, porcentaje }, ...] } con TODOS los
-  // beneficiarios activos de la cuenta. Al SP se le pasa como XML (un solo
-  // parámetro), para que se guarden todos o ninguno en una sola transacción.
+  // beneficiarios activos de la cuenta.
+  // Persona 1 NO hizo un SP "en lote": solo existe sp_ActualizarBeneficiario, que
+  // cambia UN beneficiario y rechaza (50009) si la suma de la cuenta pasaría de 100.
+  // Por eso aquí el servidor:
+  //   1) valida la forma y que la suma NO pase de 100 (así ningún paso puede fallar por eso);
+  //   2) lee los beneficiarios actuales con sp_ListarBeneficiarios (de ahí salen el
+  //      nombre y el parentesco que sp_ActualizarBeneficiario exige, y además se
+  //      comprueba que el usuario tenga acceso a la cuenta);
+  //   3) llama a sp_ActualizarBeneficiario solo para los que cambian, empezando por
+  //      los que BAJAN: así la suma nunca supera 100 en los pasos intermedios.
   router.put('/cuentas/:numero/porcentajes', async (req, res, next) => {
     try {
       const lista = req.body?.porcentajes;
@@ -127,17 +134,40 @@ export function crearRutasBeneficiarios(ejecutarSP) {
         lista.every((x) => esEntero(x?.idBeneficiario) && esEntero(x?.porcentaje));
       if (!formaValida) return responderError(res, 50007);
 
-      // El XML se arma SOLO con números enteros ya validados, así que no puede
-      // contener texto del usuario ni caracteres especiales de XML.
-      const xml =
-        '<p>' + lista.map((x) => `<b id="${x.idBeneficiario}" pct="${x.porcentaje}"/>`).join('') + '</p>';  // check: formato XML (<p><b id pct/></p>) que espere el SP de porcentajes
+      const nuevos = new Map(lista.map((x) => [x.idBeneficiario, x.porcentaje]));
+      if (nuevos.size !== lista.length) return responderError(res, 50007); // ids repetidos
+      if (lista.some((x) => x.porcentaje < 0 || x.porcentaje > 100)) return responderError(res, 50004);
+      if (lista.reduce((suma, x) => suma + x.porcentaje, 0) > 100) return responderError(res, 50009);
 
-      const { codigo } = await ejecutarSP('dbo.sp_ActualizarPorcentajes', {  // check: nombre del SP
-        inIdUsuario: [sql.Int, req.session.idUsuario],  // check
-        inNumeroCuenta: [sql.VarChar(16), req.params.numero],  // check
-        inXml: [sql.Xml, xml],  // check
+      // Beneficiarios activos de la cuenta, tal como están ahora en la base de datos.
+      const actual = await ejecutarSP('dbo.sp_ListarBeneficiarios', {
+        inIdUsuario: [sql.Int, req.session.idUsuario],
+        inNumeroCuenta: [sql.VarChar(16), req.params.numero],
       });
-      if (codigo !== 0) return responderError(res, codigo);
+      if (actual.codigo !== 0) return responderError(res, actual.codigo);
+      const activos = actual.recordsets[0] ?? [];
+
+      // La lista debe traer exactamente a los beneficiarios activos, ni más ni menos.
+      const mismosBeneficiarios =
+        activos.length === nuevos.size && activos.every((b) => nuevos.has(b.IdBeneficiario));
+      if (!mismosBeneficiarios) return responderError(res, 50007);
+
+      // Solo los que cambian; primero los que bajan (diferencia más negativa).
+      const cambios = activos
+        .map((b) => ({ b, nuevo: nuevos.get(b.IdBeneficiario) }))
+        .filter((x) => x.nuevo !== x.b.Porcentaje)
+        .sort((x, y) => x.nuevo - x.b.Porcentaje - (y.nuevo - y.b.Porcentaje));
+
+      for (const { b, nuevo } of cambios) {
+        const { codigo } = await ejecutarSP('dbo.sp_ActualizarBeneficiario', {
+          inIdUsuario: [sql.Int, req.session.idUsuario],
+          inIdBeneficiario: [sql.Int, b.IdBeneficiario],
+          inNombre: [sql.VarChar(64), b.Nombre],
+          inIdParentezco: [sql.Int, b.IdParentezco],
+          inPorcentaje: [sql.Int, nuevo],
+        });
+        if (codigo !== 0) return responderError(res, codigo);
+      }
       res.json({ ok: true });
     } catch (error) {
       next(error);
@@ -145,19 +175,23 @@ export function crearRutasBeneficiarios(ejecutarSP) {
   });
 
   // ---------------------------------------------------- actualizar y eliminar
-  // Solo cambia nombre y parentesco; el porcentaje se cambia con la ruta de arriba.
+  // sp_ActualizarBeneficiario recibe nombre, parentesco y porcentaje juntos. El
+  // formulario de edición manda el porcentaje que ya tiene el beneficiario, así que
+  // aquí solo cambian el nombre y el parentesco (el porcentaje se cambia con la ruta
+  // de arriba, que valida la suma de todos).
   router.put('/beneficiarios/:id', async (req, res, next) => {
     try {
       const id = idDeUrl(req.params.id);
       const d = req.body ?? {};
-      if (id === null || !esTexto(d.nombre, 64) || !esEntero(d.idParentezco)) {
+      if (id === null || !esTexto(d.nombre, 64) || !esEntero(d.idParentezco) || !esEntero(d.porcentaje)) {
         return responderError(res, 50007);
       }
-      const { codigo } = await ejecutarSP('dbo.sp_ActualizarBeneficiario', {  // check: nombre del SP
-        inIdUsuario: [sql.Int, req.session.idUsuario],  // check
-        inIdBeneficiario: [sql.Int, id],  // check
-        inNombre: [sql.VarChar(64), d.nombre],  // check
-        inIdParentezco: [sql.Int, d.idParentezco],  // check
+      const { codigo } = await ejecutarSP('dbo.sp_ActualizarBeneficiario', {
+        inIdUsuario: [sql.Int, req.session.idUsuario],
+        inIdBeneficiario: [sql.Int, id],
+        inNombre: [sql.VarChar(64), d.nombre],
+        inIdParentezco: [sql.Int, d.idParentezco],
+        inPorcentaje: [sql.Int, d.porcentaje],
       });
       if (codigo !== 0) return responderError(res, codigo);
       res.json({ ok: true });
@@ -170,9 +204,9 @@ export function crearRutasBeneficiarios(ejecutarSP) {
     try {
       const id = idDeUrl(req.params.id);
       if (id === null) return responderError(res, 50006);
-      const { codigo } = await ejecutarSP('dbo.sp_EliminarBeneficiario', {  // check: nombre del SP
-        inIdUsuario: [sql.Int, req.session.idUsuario],  // check
-        inIdBeneficiario: [sql.Int, id],  // check
+      const { codigo } = await ejecutarSP('dbo.sp_EliminarBeneficiario', {
+        inIdUsuario: [sql.Int, req.session.idUsuario],
+        inIdBeneficiario: [sql.Int, id],
       });
       if (codigo !== 0) return responderError(res, codigo);
       res.json({ ok: true });

@@ -4,8 +4,8 @@
 
 import express from 'express';
 import session from 'express-session';
-import { crearRutasSesion } from './rutas/sesion.js';
-import { crearRutasCuentas } from './rutas/cuentas.js';
+import { crearRutasSesion } from './rutas/Sesion.js';
+import { crearRutasCuentas } from './rutas/Cuentas.js';
 import { crearRutasBeneficiarios } from './rutas/beneficiarios.js';
 
 export function crearApp(ejecutarSP, { secreto, produccion = false } = {}) {

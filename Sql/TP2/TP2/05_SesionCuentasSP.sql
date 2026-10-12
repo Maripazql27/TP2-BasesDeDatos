@@ -9,67 +9,72 @@
    ========================================================================== */
 
 
---USE CuentaAhorrosTP2; --conexion a base de datos real
-USE PruebaTP2_Persona2 --conexion a base de datos de pruebla
+USE CuentaAhorrosTP2;   -- base oficial
 GO
 
 /* --------------------------------------------------------------------------
    sp_IniciarSesion
-   Valida usuario y contrase?a. Si son correctos, registra el login en la
-   bit?cora (tipo 1, con la IP) y devuelve el usuario. Solo se registran los
+   Valida usuario y contrasena. Si son correctos, registra el login en la
+   bitacora (tipo 1, con la IP) y devuelve el usuario. Solo se registran los
    logins EXITOSOS, como pide el enunciado.
 
    Entrada : @inNombreUsuario VARCHAR(64), @inClave VARCHAR(128), @inIP VARCHAR(45)
-   Salida  : @outResultCode  0 = ?xito, 50001 = usuario o clave incorrectos
-             (no se dice cu?l de los dos, para no ayudar a adivinar usuarios)
-   Consulta (solo si ?xito): IdUsuario, EsAdministrador
+   Salida  : @outResultCode  0 = exito, 50001 = usuario o clave incorrectos
+             (no se dice cual de los dos, para no ayudar a adivinar usuarios)
+   Consulta (solo si exito): IdUsuario, EsAdministrador
    -------------------------------------------------------------------------- */
 DROP PROCEDURE IF EXISTS dbo.sp_IniciarSesion;   -- se borra si ya exist?a, para poder volver a ejecutar el script
 GO
 CREATE PROCEDURE dbo.sp_IniciarSesion
-    @inNombreUsuario VARCHAR(64)     -- lo que el usuario escribi? en el campo "usuario"
-    , @inClave VARCHAR(128)          -- lo que escribi? en el campo "contrase?a"
+    @inNombreUsuario VARCHAR(64)     -- lo que el usuario escribio en el campo "usuario"
+    , @inClave VARCHAR(128)          -- lo que escribio en el campo "contrasena"
     , @inIP VARCHAR(45)              -- IP del equipo (45 caracteres alcanzan hasta para IPv6)
-    , @outResultCode INT OUTPUT      -- aqu? se devuelve el resultado a quien llam? al SP
+    , @outResultCode INT OUTPUT      -- aqu? se devuelve el resultado a quien llama al SP
 AS
 BEGIN
     SET NOCOUNT ON;          -- evita los mensajes de "N filas afectadas" que estorban a la capa web
     SET @outResultCode = 0;  -- se asume ?xito; solo cambia si se detecta un error
 
-    DECLARE @idTipoOperacionLogin INT = 1;   -- 'Login' en el cat?logo de tipos de operaci?n
-    DECLARE @idUsuario INT;                  -- quedar? con el Id del usuario si las credenciales son v?lidas
-    DECLARE @flagEsAdministrador BIT;        -- 1 si el usuario es administrador (l?gica positiva)
+    DECLARE @idTipoOperacionLogin INT = 1;   -- 'Login' en el catalogo de tipos de operacion
+    DECLARE @idUsuario INT;                  -- quedara con el Id del usuario si las credenciales son validas
+    DECLARE @flagEsAdministrador BIT;        -- 1 si el usuario es administrador (logica positiva)
 
     BEGIN TRY
         -- Busca un usuario que coincida en nombre Y en clave a la vez.
         -- Si no hay coincidencia, el SELECT no asigna nada y @idUsuario se queda en NULL.
-        -- COLLATE ..._CS_AS = Case Sensitive, Accent Sensitive: distingue may?sculas y tildes en la clave.
+        -- COLLATE ..._CS_AS = Case Sensitive, Accent Sensitive: distingue mayasculas y tildes en la clave.
         SELECT @idUsuario = U.Id
             , @flagEsAdministrador = U.EsAdministrador
         FROM dbo.Usuario U
         WHERE U.NombreUsuario = @inNombreUsuario
           AND U.Clave = @inClave COLLATE Latin1_General_CS_AS;
 
-        -- NULL significa que no se encontr? a nadie: credenciales incorrectas.
-        -- Se corta aqu? con RETURN: no se registra bit?cora ni se devuelve nada.
+        -- NULL significa que no se encontro a nadie: credenciales incorrectas.
+        -- Se corta aqui con RETURN: no se registra bitacora ni se devuelve nada.
         IF @idUsuario IS NULL
         BEGIN
             SET @outResultCode = 50001;
             RETURN;
         END;
 
-        -- Llegar aqu? significa que el login es correcto: se anota en la bit?cora.
-        -- Se supone que sp_RegistrarBitacora recibe estos 5 par?metros @in y no
-        -- tiene par?metro OUTPUT. Si Persona 1 lo define distinto, ajustar aqu?.
+        -- Llegar aqui significa que el login es correcto: se anota en la bitacora.
+        -- sp_RegistrarBitacora (Persona 1) devuelve @outResultCode (OUTPUT).
+        DECLARE @codigoBitacora INT;
         EXEC dbo.sp_RegistrarBitacora
             @inIdUsuario = @idUsuario
             , @inIdTipoOperacion = @idTipoOperacionLogin
             , @inIP = @inIP
-            , @inJsonAntes = NULL        -- un login no cambia datos, as? que no hay "antes"
-            , @inJsonDespues = NULL;     -- ni "despu?s"
+            , @inJsonAntes = NULL        -- un login no cambia datos, asi que no hay "antes"
+            , @inJsonDespues = NULL
+            , @outResultCode = @codigoBitacora OUTPUT;
+        IF (@codigoBitacora <> 0)
+        BEGIN
+            SET @outResultCode = @codigoBitacora;   -- la bitacora fallo: se devuelve su codigo
+            RETURN;
+        END;
 
         -- Esto es lo que la web recibe: con el IdUsuario guarda la sesi?n y con
-        -- EsAdministrador decide qu? mostrar.
+        -- EsAdministrador decide que mostrar.
         SELECT @idUsuario AS IdUsuario
             , @flagEsAdministrador AS EsAdministrador;
     END TRY
@@ -89,18 +94,18 @@ GO
    Devuelve las cuentas que el usuario puede ver. El administrador ve todas.
 
    Entrada : @inIdUsuario INT
-   Salida  : @outResultCode  0 = ?xito, 50002 = usuario inexistente
+   Salida  : @outResultCode  0 = exito, 50002 = usuario inexistente
    Consulta: IdCuenta, NumeroCuenta, Saldo, NombreTipoCuenta
    -------------------------------------------------------------------------- */
 DROP PROCEDURE IF EXISTS dbo.sp_ListarCuentasUsuario;
 GO
 CREATE PROCEDURE dbo.sp_ListarCuentasUsuario
-    @inIdUsuario INT                 -- Id del usuario con sesi?n iniciada (lo pone el servidor, no el navegador)
+    @inIdUsuario INT                 -- Id del usuario con sesion iniciada (lo pone el servidor, no el navegador)
     , @outResultCode INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;          -- evita mensajes de 'N filas afectadas' que estorban a la capa web
-    SET @outResultCode = 0;  -- se asume ?xito; solo cambia si se detecta un error
+    SET @outResultCode = 0;  -- se asume exito; solo cambia si se detecta un error
 
     DECLARE @flagEsAdministrador BIT;   -- 1 si el usuario es administrador 
 
@@ -119,7 +124,7 @@ BEGIN
         END;
 
         -- El administrador ve todas las cuentas; el cliente, solo las que aparecen
-        -- en UsuarioPuedeVer (relaci?n muchos a muchos usuario-cuenta).
+        -- en UsuarioPuedeVer (relacion muchos a muchos usuario-cuenta).
         IF @flagEsAdministrador = 1
         BEGIN
             -- Administrador: todas las cuentas. Cuenta -> tipo de cuenta para traer el nombre del tipo.
@@ -134,7 +139,7 @@ BEGIN
         END
         ELSE
         BEGIN
-            -- Cliente: se parte de UsuarioPuedeVer (filtrada por su Id) y de ah? se llega a
+            -- Cliente: se parte de UsuarioPuedeVer (filtrada por su Id) y de ahi se llega a
             -- la cuenta y a su tipo. Sin fila en UsuarioPuedeVer, la cuenta no aparece.
             SELECT C.Id AS IdCuenta
                 , C.NumeroCuenta
@@ -162,11 +167,11 @@ GO
 
 /* --------------------------------------------------------------------------
    sp_CerrarSesion
-   Registra el logout en la bit?cora (usuario, operaci?n, fecha y hora).
-   Es una sola escritura (dentro de sp_RegistrarBitacora): sin transacci?n.
+   Registra el logout en la bitacora (usuario, operacion, fecha y hora).
+   Es una sola escritura (dentro de sp_RegistrarBitacora): sin transaccion.
 
    Entrada : @inIdUsuario INT
-   Salida  : @outResultCode  0 = ?xito, 50002 = usuario inexistente
+   Salida  : @outResultCode  0 = exito, 50002 = usuario inexistente
    -------------------------------------------------------------------------- */
 DROP PROCEDURE IF EXISTS dbo.sp_CerrarSesion;
 GO
@@ -178,24 +183,30 @@ BEGIN
     SET NOCOUNT ON;
     SET @outResultCode = 0;
 
-    DECLARE @idTipoOperacionLogout INT = 2;   -- 'Logout' en el cat?logo de tipos de operaci?n
+    DECLARE @idTipoOperacionLogout INT = 2;   -- 'Logout' en el catalogo de tipos de operacion
 
     BEGIN TRY
-        -- Si el usuario no existe no se escribe nada en la bit?cora.
+        -- Si el usuario no existe no se escribe nada en la bitacora.
         IF NOT EXISTS (SELECT 1 FROM dbo.Usuario U WHERE U.Id = @inIdUsuario)
         BEGIN
             SET @outResultCode = 50002;
             RETURN;
         END;
 
-        -- sp_RegistrarBitacora recibe estos 5 par?metros @in y no
-        -- tiene par?metro OUTPUT.
+        -- sp_RegistrarBitacora (Persona 1) devuelve @outResultCode (OUTPUT).
+        DECLARE @codigoBitacora INT;
         EXEC dbo.sp_RegistrarBitacora
             @inIdUsuario = @inIdUsuario
             , @inIdTipoOperacion = @idTipoOperacionLogout
             , @inIP = NULL               -- el logout no guarda IP
             , @inJsonAntes = NULL
-            , @inJsonDespues = NULL;
+            , @inJsonDespues = NULL
+            , @outResultCode = @codigoBitacora OUTPUT;
+        IF (@codigoBitacora <> 0)
+        BEGIN
+            SET @outResultCode = @codigoBitacora;   -- la bitacora fallo: se devuelve su codigo
+            RETURN;
+        END;
     END TRY
     BEGIN CATCH
         -- Error inesperado (por ejemplo, falla al escribir en la bitácora):

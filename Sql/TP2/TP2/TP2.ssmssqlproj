@@ -1,0 +1,115 @@
+<?xml version="1.0"?>
+<SqlWorkbenchSqlProject xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Name="TP2">
+  <Items>
+    <LogicalFolder Name="Connections" Type="2" Sorted="true">
+      <Items>
+        <ConnectionNode Name="NACHO-DESKTOP\SQLEXPRESS:NACHO-DESKTOP\Nacho">
+          <Created>2026-10-12T05:34:10.6180239-06:00</Created>
+          <Type>SQL</Type>
+          <Server>NACHO-DESKTOP\SQLEXPRESS</Server>
+          <UserName />
+          <Authentication>Windows Authentication</Authentication>
+          <InitialDB>master</InitialDB>
+          <LoginTimeout>30</LoginTimeout>
+          <TrustServerCertificate>True</TrustServerCertificate>
+          <HostNameInServerCertificate />
+          <EncryptionOption>True</EncryptionOption>
+          <ExecutionTimeout>0</ExecutionTimeout>
+          <ConnectionProtocol>NotSpecified</ConnectionProtocol>
+          <ApplicationName>Microsoft SQL Server Management Studio - Query</ApplicationName>
+        </ConnectionNode>
+      </Items>
+    </LogicalFolder>
+    <LogicalFolder Name="Queries" Type="0" Sorted="true">
+      <Items>
+        <FileNode Name="04_RegistrarErrorSP.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:NACHO-DESKTOP\SQLEXPRESS:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>NACHO-DESKTOP\SQLEXPRESS</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>04_RegistrarErrorSP.sql</FullPath>
+        </FileNode>
+        <FileNode Name="05_SesionCuentasSP.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>05_SesionCuentasSP.sql</FullPath>
+        </FileNode>
+        <FileNode Name="06_EstadoscuentaSP.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>06_EstadoscuentaSP.sql</FullPath>
+        </FileNode>
+        <FileNode Name="bdpermisos.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>bdpermisos.sql</FullPath>
+        </FileNode>
+        <FileNode Name="CargarCatalogos.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>CargarCatalogos.sql</FullPath>
+        </FileNode>
+        <FileNode Name="CreaBasesTablas.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>CreaBasesTablas.sql</FullPath>
+        </FileNode>
+        <FileNode Name="EjecutarCargaCatalogos.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>EjecutarCargaCatalogos.sql</FullPath>
+        </FileNode>
+        <FileNode Name="EjecutarCargaNoCatalogos.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>EjecutarCargaNoCatalogos.sql</FullPath>
+        </FileNode>
+        <FileNode Name="Pruebas_BD.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>Pruebas_BD.sql</FullPath>
+        </FileNode>
+        <FileNode Name="Sp_Beneficiarios.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>Sp_Beneficiarios.sql</FullPath>
+        </FileNode>
+        <FileNode Name="Sp_BeneficiariosFix.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:NACHO-DESKTOP\SQLEXPRESS:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>NACHO-DESKTOP\SQLEXPRESS</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>Sp_BeneficiariosFix.sql</FullPath>
+        </FileNode>
+        <FileNode Name="Sp_Cargar.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>Sp_Cargar.sql</FullPath>
+        </FileNode>
+        <FileNode Name="Sp_ConsultarCatalogos.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>Sp_ConsultarCatalogos.sql</FullPath>
+        </FileNode>
+        <FileNode Name="Sp_RegistrarBitacora.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>Sp_RegistrarBitacora.sql</FullPath>
+        </FileNode>
+      </Items>
+    </LogicalFolder>
+    <LogicalFolder Name="Miscellaneous" Type="3" Sorted="true">
+      <Items />
+    </LogicalFolder>
+  </Items>
+</SqlWorkbenchSqlProject>

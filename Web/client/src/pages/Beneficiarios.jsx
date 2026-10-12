@@ -29,6 +29,7 @@ export default function Beneficiarios() {
   const [parentezcos, setParentezcos] = useState([]);     // catálogo
   const [tiposDocumento, setTiposDocumento] = useState([]); // catálogo
   const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState(false); // true si el servidor no pudo entregar la lista
   const [mensaje, setMensaje] = useState(null); // { tipo: 'ok' | 'error', texto }
   // Qué formulario está abierto: null (ninguno), 'agregar', o el beneficiario
   // cuyos datos se editan.
@@ -58,6 +59,14 @@ export default function Beneficiarios() {
   useEffect(() => {
     async function cargar() {
       const r = await listarBeneficiarios(numeroCuenta);
+      // Si el servidor responde con error (por ejemplo "sin acceso a esta cuenta"), se
+      // muestra el motivo en vez de aparentar que la cuenta no tiene beneficiarios.
+      setErrorCarga(!r.ok);
+      if (!r.ok) {
+        setBeneficiarios([]);
+        setResumen(null);
+        setMensaje({ tipo: 'error', texto: r.mensaje });
+      }
       if (r.ok) {
         setBeneficiarios(r.beneficiarios);
         setResumen(r.resumen);
@@ -82,17 +91,47 @@ export default function Beneficiarios() {
   // Agregar un beneficiario nuevo o editar nombre y parentesco.
   async function guardar(datos) {
     const esEdicion = formulario !== 'agregar';
-    const r = esEdicion
-      ? await actualizarBeneficiario(formulario.IdBeneficiario, datos)
-      : await agregarBeneficiario(numeroCuenta, datos);
+    if (esEdicion) {
+      const r = await actualizarBeneficiario(formulario.IdBeneficiario, datos);
+      if (r.ok) {
+        setMensaje({ tipo: 'ok', texto: 'Cambios guardados.' });
+        setFormulario(null);
+        setVersion(version + 1);
+      } else {
+        setMensaje({ tipo: 'error', texto: r.mensaje }); // el formulario sigue abierto
+      }
+      return;
+    }
+
+    // AGREGAR. Máximo 3 beneficiarios activos: se avisa antes de tocar nada.
+    if (beneficiarios.length >= 3) {
+      setMensaje({ tipo: 'error', texto: 'La cuenta ya tiene 3 beneficiarios activos. Desactive uno antes de agregar otro.' });
+      return;
+    }
+    // Si el usuario bajó el porcentaje de los beneficiarios actuales para hacer espacio,
+    // primero se guardan esos cambios (la suma con el nuevo no pasa de 100) y luego se agrega.
+    const { ajustes, ...datosNuevo } = datos;
+    const originales = beneficiarios.map((b) => ({ idBeneficiario: b.IdBeneficiario, porcentaje: b.Porcentaje }));
+    const cambiaron = ajustes.some((a) => originales.find((o) => o.idBeneficiario === a.idBeneficiario)?.porcentaje !== a.porcentaje);
+    if (cambiaron) {
+      const ra = await actualizarPorcentajes(numeroCuenta, ajustes);
+      if (!ra.ok) {
+        setMensaje({ tipo: 'error', texto: ra.mensaje });
+        setVersion(version + 1);
+        return;
+      }
+    }
+    const r = await agregarBeneficiario(numeroCuenta, datosNuevo);
     if (r.ok) {
       setMensaje({ tipo: 'ok', texto: 'Cambios guardados.' });
       setFormulario(null);
-      revisarSuma.current = !esEdicion; // al agregar, revisar la suma
-      setVersion(version + 1);          // provoca nueva consulta
+      revisarSuma.current = true; // revisar si la suma quedó distinta de 100
+      setVersion(version + 1);
     } else {
-      // Se deja el formulario abierto para que el usuario corrija.
+      // Si ya se habían bajado los porcentajes de los otros, se devuelven a como estaban.
+      if (cambiaron) await actualizarPorcentajes(numeroCuenta, originales);
       setMensaje({ tipo: 'error', texto: r.mensaje });
+      setVersion(version + 1);
     }
   }
 
@@ -124,6 +163,11 @@ export default function Beneficiarios() {
   // Abre el formulario de agregar/editar (cierra el editor de porcentajes).
   function abrirFormulario(valor) {
     setMensaje(null);
+    // Máximo 3 beneficiarios activos: se avisa de una vez, sin abrir el formulario.
+    if (valor === 'agregar' && beneficiarios.length >= 3) {
+      setMensaje({ tipo: 'error', texto: 'La cuenta ya tiene 3 beneficiarios activos. Desactive uno antes de agregar otro.' });
+      return;
+    }
     setEditandoPorcentajes(false);
     setFormulario(valor);
   }
@@ -151,7 +195,7 @@ export default function Beneficiarios() {
       {mensaje && <p className={mensaje.tipo === 'ok' ? 'mensaje-ok' : 'mensaje-error'}>{mensaje.texto}</p>}
 
       {cargando && <p>Cargando...</p>}
-      {!cargando && beneficiarios.length === 0 && <p>No hay beneficiarios activos.</p>}
+      {!cargando && !errorCarga && beneficiarios.length === 0 && <p>No hay beneficiarios activos.</p>}
 
       {/* O se muestra el editor de porcentajes, o la tabla normal con sus botones */}
       {editandoPorcentajes ? (
@@ -198,7 +242,7 @@ export default function Beneficiarios() {
 
           {resumen && <p>Suma de porcentajes: {resumen.SumaPorcentajes}%</p>} {/* check: nombre de columna que devuelve el SP */}
 
-          {formulario === null && (
+          {formulario === null && !errorCarga && (
             <div className="botones">
               {beneficiarios.length > 0 && (
                 <button onClick={abrirEditorPorcentajes}>Editar porcentajes</button>
@@ -215,6 +259,7 @@ export default function Beneficiarios() {
               beneficiario={formulario === 'agregar' ? null : formulario}
               parentezcos={parentezcos}
               tiposDocumento={tiposDocumento}
+              otros={beneficiarios}
               onGuardar={guardar}
               onCancelar={() => setFormulario(null)}
             />
