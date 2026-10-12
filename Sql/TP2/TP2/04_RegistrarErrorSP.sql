@@ -1,21 +1,11 @@
-/* ==========================================================================
-   TP2 - Base de Datos 1 - Cuenta de Ahorros
-   Script 04b: procedimiento común para registrar errores inesperados
-
-   Todos los SP del grupo lo llaman desde su bloque CATCH. Así el INSERT en
-   ErrorBD está escrito UNA sola vez y todos los errores se guardan igual.
-
-   Requiere: la tabla dbo.ErrorBD (script 01 del grupo).
-   ========================================================================== */
---USE CuentaAhorrosTP2; --conexion a base de datos real
-USE PruebaTP2_Persona2 --conexion a base de datos de prueba
+USE CuentaAhorrosTP2;   -- base oficial (Persona 1)
 GO
 
 /* --------------------------------------------------------------------------
    sp_RegistrarError
-   Guarda en dbo.ErrorBD los datos del error que se está atendiendo en el
-   CATCH que lo llamó (número, severidad, estado, procedimiento donde ocurrió,
-   línea y mensaje).
+   Guarda en dbo.ErrorBD los datos del error que se est? atendiendo en el
+   CATCH que lo llam? (n?mero, severidad, estado, procedimiento donde ocurri?,
+   l?nea y mensaje).
 
    Solo se debe llamar DENTRO de un bloque CATCH. Las funciones ERROR_NUMBER(),
    ERROR_MESSAGE(), etc. devuelven los datos del error original aunque se

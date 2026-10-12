@@ -1,4 +1,5 @@
 
+
 // EDITA LOS PORCENTAJES DE TODOS LOS BENEFICIARIOS A LA VEZ
 
 
@@ -21,7 +22,9 @@ export default function EditorPorcentajes({ beneficiarios, onGuardar, onCancelar
     (suma, b) => suma + (esValido(valores[b.IdBeneficiario]) ? Number(valores[b.IdBeneficiario]) : 0),
     0
   );
-  const puedeGuardar = todosValidos && total === 100;
+  // La suma no puede pasar de 100 (lo exige el SP). Si es menor, se puede guardar:
+  // la pantalla de beneficiarios mostrará la alerta hasta que sume 100.
+  const puedeGuardar = todosValidos && total <= 100;
 
   // Actualiza el valor de UN beneficiario sin perder los demás.
   function cambiar(id, texto) {
@@ -71,8 +74,10 @@ export default function EditorPorcentajes({ beneficiarios, onGuardar, onCancelar
       </table>
 
       {/* Total en vivo: verde si es 100, rojo si no */}
-      <p className={puedeGuardar ? 'mensaje-ok' : 'mensaje-error'}>
-        Total: {total}% {puedeGuardar ? '' : '(debe sumar exactamente 100)'}
+      <p className={puedeGuardar && total === 100 ? 'mensaje-ok' : 'mensaje-error'}>
+        Total: {total}%{' '}
+        {total > 100 && '(no puede superar 100)'}
+        {puedeGuardar && total < 100 && '(se puede guardar, pero quedará la alerta hasta que sume 100)'}
       </p>
 
       <div className="botones">

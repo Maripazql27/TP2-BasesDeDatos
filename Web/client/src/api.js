@@ -7,7 +7,8 @@
 //     listarCuentas          -> GET  /api/cuentas -> sp_ListarCuentasUsuario
 //     consultarEstados       -> GET  /api/cuentas/:numero/estados
 //                                                 -> sp_ConsultarEstadosCuenta
-const USAR_MOCK_BENEFICIARIOS = true;
+// false = usa el servidor y la base de datos reales (SP de Persona 1); true = datos de mentira en memoria.
+const USAR_MOCK_BENEFICIARIOS = false;
 
 // Simula la demora de una petición real (milisegundos) para ver "Cargando...".
 const esperar = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
@@ -224,8 +225,9 @@ export async function agregarBeneficiario(numeroCuenta, d) {
   }
 }
 
-// Solo cambia nombre y parentesco.
-// El porcentaje se cambia con actualizarPorcentajes (todos a la vez).
+// Real: sp_ActualizarBeneficiario. El SP exige nombre, parentesco y porcentaje; el
+// formulario manda el porcentaje que el beneficiario ya tiene, así que aquí solo
+// cambian nombre y parentesco. El porcentaje se cambia con actualizarPorcentajes.
 export async function actualizarBeneficiario(idBeneficiario, d) {
   if (!USAR_MOCK_BENEFICIARIOS) {
     return pedir('PUT', `/api/beneficiarios/${encodeURIComponent(idBeneficiario)}`, d);
@@ -244,8 +246,9 @@ export async function actualizarBeneficiario(idBeneficiario, d) {
 
 
 // Recibe los porcentajes de TODOS los beneficiarios activos de la cuenta:
-// [{ idBeneficiario, porcentaje }]. Deben sumar 100. O se guardan todos
-// o no se guarda ninguno (en SQL Server será una transacción).
+// [{ idBeneficiario, porcentaje }]. La suma no puede pasar de 100; si queda menor
+// a 100 la pantalla muestra la alerta. El servidor la guarda llamando a
+// sp_ActualizarBeneficiario una vez por cada beneficiario que cambia.
 export async function actualizarPorcentajes(numeroCuenta, lista) {
   if (!USAR_MOCK_BENEFICIARIOS) {
     return pedir('PUT', `/api/cuentas/${encodeURIComponent(numeroCuenta)}/porcentajes`, { porcentajes: lista });
