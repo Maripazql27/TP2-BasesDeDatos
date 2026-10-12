@@ -27,7 +27,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Validar que exista el usuario.
+    -- ver si existe el usuario
     IF NOT EXISTS (
         SELECT 1
         FROM dbo.Usuario
@@ -38,7 +38,7 @@ BEGIN
         RETURN;
     END;
 
-    -- Validar el tipo de operacion.
+    -- ver el tipo de operacion
     IF NOT EXISTS (
         SELECT 1
         FROM dbo.TipoOperacionBitacora
@@ -49,7 +49,7 @@ BEGIN
         RETURN;
     END;
 
-    -- El login debe registrar una IP.
+    -- El login debe registrar una IP
     IF @inIdTipoOperacion = 1
        AND (@inIP IS NULL OR LTRIM(RTRIM(@inIP)) = '')
     BEGIN
@@ -57,7 +57,7 @@ BEGIN
         RETURN;
     END;
 
-    -- Agregar beneficiario requiere datos posteriores.
+    -- Agregar beneficiario requiere datos despues
     IF @inIdTipoOperacion = 3
        AND @inJsonDespues IS NULL
     BEGIN
@@ -65,9 +65,19 @@ BEGIN
         RETURN;
     END;
 
-    -- Actualizar y eliminar requieren ambos estados.
+    -- Actualizar y eliminar requieren los2 estados
     IF @inIdTipoOperacion IN (4, 5, 6)
        AND (@inJsonAntes IS NULL OR @inJsonDespues IS NULL)
+    BEGIN
+        SET @outResultCode = 50007;
+        RETURN;
+    END;
+
+    -- Valida el formato de los JSON 
+    IF ((@inJsonAntes IS NOT NULL
+         AND ISJSON(@inJsonAntes) <> 1)
+        OR (@inJsonDespues IS NOT NULL
+            AND ISJSON(@inJsonDespues) <> 1))
     BEGIN
         SET @outResultCode = 50007;
         RETURN;
