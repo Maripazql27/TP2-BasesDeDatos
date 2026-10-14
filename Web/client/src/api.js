@@ -1,5 +1,5 @@
 
-// api.js — CAPA DE ACCESO A DATOS DE LA WEB
+// APA DE ACCESO A DATOS DE LA WEB
 // ESTADO DE LA CONEXIÓN
 //     iniciarSesion          -> POST /api/login   -> sp_IniciarSesion
 //     cerrarSesion           -> POST /api/logout  -> sp_CerrarSesion
