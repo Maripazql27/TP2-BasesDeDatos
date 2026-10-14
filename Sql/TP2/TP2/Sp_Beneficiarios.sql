@@ -16,7 +16,7 @@ SELECT @outResultCode AS CodigoResultado;
 
 --------------------------------------------------------------------------------------------
 --Crea Listar beneficiarios
-CREATE PROCEDURE dbo.sp_ListarBeneficiarios
+CREATE OR ALTER PROCEDURE dbo.sp_ListarBeneficiarios
     @inIdUsuario INT,
     @inNumeroCuenta VARCHAR(16),
     @outResultCode INT OUTPUT
@@ -34,13 +34,19 @@ BEGIN
     END;
 
     -- ver el acceso del usuario a la cuenta.
+    -- (el administrador puede acceder los datos de cualquier cuenta)
     IF NOT EXISTS (
         SELECT 1
-        FROM dbo.UsuarioPuedeVer UV
-        INNER JOIN dbo.Cuenta C
-            ON UV.IdCuenta = C.Id
-        WHERE UV.IdUsuario = @inIdUsuario
-          AND C.NumeroCuenta = @inNumeroCuenta
+        FROM dbo.Cuenta C
+        WHERE C.NumeroCuenta = @inNumeroCuenta
+          AND (EXISTS (SELECT 1
+                       FROM dbo.UsuarioPuedeVer UV
+                       WHERE UV.IdCuenta = C.Id
+                         AND UV.IdUsuario = @inIdUsuario)
+               OR EXISTS (SELECT 1
+                          FROM dbo.Usuario U
+                          WHERE U.Id = @inIdUsuario
+                            AND U.EsAdministrador = 1))
     )
     BEGIN
         SET @outResultCode = 50002;
@@ -91,7 +97,7 @@ GO
 
 --------------------------------------------------------------------------------------------------
 --Crea agregar beneficiario
-CREATE PROCEDURE dbo.sp_AgregarBeneficiario
+CREATE OR ALTER PROCEDURE dbo.sp_AgregarBeneficiario
     @inIdUsuario INT,
     @inNumeroCuenta VARCHAR(16),
     @inIdTipoDocuIdentidad INT,
@@ -157,12 +163,18 @@ BEGIN
     END;
 
     -- ver  acceso a la cuenta
+    -- (el administrador puede acceder los datos de cualquier cuenta)
     SELECT @idCuenta = C.Id
     FROM dbo.Cuenta C
-    INNER JOIN dbo.UsuarioPuedeVer UV
-        ON C.Id = UV.IdCuenta
     WHERE C.NumeroCuenta = @inNumeroCuenta
-      AND UV.IdUsuario = @inIdUsuario;
+      AND (EXISTS (SELECT 1
+                   FROM dbo.UsuarioPuedeVer UV
+                   WHERE UV.IdCuenta = C.Id
+                     AND UV.IdUsuario = @inIdUsuario)
+           OR EXISTS (SELECT 1
+                      FROM dbo.Usuario U
+                      WHERE U.Id = @inIdUsuario
+                        AND U.EsAdministrador = 1));
 
     IF @idCuenta IS NULL
     BEGIN
@@ -358,7 +370,7 @@ SELECT @outResultCode AS CodigoResultado;
 
 */
 
-CREATE PROCEDURE dbo.sp_ActualizarBeneficiario
+CREATE OR ALTER PROCEDURE dbo.sp_ActualizarBeneficiario
     @inIdUsuario INT,
     @inIdBeneficiario INT,
     @inNombre VARCHAR(64),
@@ -420,12 +432,18 @@ BEGIN
     END;
 
     -- ver permiso sobre la cuenta
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.UsuarioPuedeVer
-        WHERE IdUsuario = @inIdUsuario
-          AND IdCuenta = @idCuenta
-    )
+    IF (NOT EXISTS (
+            SELECT 1
+            FROM dbo.UsuarioPuedeVer
+            WHERE IdUsuario = @inIdUsuario
+              AND IdCuenta = @idCuenta
+        )
+        AND NOT EXISTS (
+            SELECT 1
+            FROM dbo.Usuario
+            WHERE Id = @inIdUsuario
+              AND EsAdministrador = 1
+        ))
     BEGIN
         SET @outResultCode = 50002;
         RETURN;
@@ -566,7 +584,7 @@ SELECT @outResultCode AS CodigoResultado;
 No ejecutar este ejemplo sobre datos reales.
 */
 
-CREATE PROCEDURE dbo.sp_EliminarBeneficiario
+CREATE OR ALTER PROCEDURE dbo.sp_EliminarBeneficiario
     @inIdUsuario INT,
     @inIdBeneficiario INT,
     @outResultCode INT OUTPUT
@@ -600,12 +618,18 @@ BEGIN
     END;
 
     -- ver permiso del usuario
-    IF NOT EXISTS (
-        SELECT 1
-        FROM dbo.UsuarioPuedeVer
-        WHERE IdUsuario = @inIdUsuario
-          AND IdCuenta = @idCuenta
-    )
+    IF (NOT EXISTS (
+            SELECT 1
+            FROM dbo.UsuarioPuedeVer
+            WHERE IdUsuario = @inIdUsuario
+              AND IdCuenta = @idCuenta
+        )
+        AND NOT EXISTS (
+            SELECT 1
+            FROM dbo.Usuario
+            WHERE Id = @inIdUsuario
+              AND EsAdministrador = 1
+        ))
     BEGIN
         SET @outResultCode = 50002;
         RETURN;
