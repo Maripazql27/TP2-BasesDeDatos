@@ -1,18 +1,18 @@
-/* ==========================================================================
+/* 
    TP2 - Base de Datos 1 - Cuenta de Ahorros
-   Script 05: procedimientos de sesi?n y cuentas
+   Script 05: procedimientos de sesion y cuentas
 
    Contiene:
      - sp_IniciarSesion          (clave en texto plano)
      - sp_ListarCuentasUsuario
      - sp_CerrarSesion
-   ========================================================================== */
+   */
 
 
 USE CuentaAhorrosTP2;   -- base oficial
 GO
 
-/* --------------------------------------------------------------------------
+/* 
    sp_IniciarSesion
    Valida usuario y contrasena. Si son correctos, registra el login en la
    bitacora (tipo 1, con la IP) y devuelve el usuario. Solo se registran los
@@ -22,7 +22,7 @@ GO
    Salida  : @outResultCode  0 = exito, 50001 = usuario o clave incorrectos
              (no se dice cual de los dos, para no ayudar a adivinar usuarios)
    Consulta (solo si exito): IdUsuario, EsAdministrador
-   -------------------------------------------------------------------------- */
+  */
 DROP PROCEDURE IF EXISTS dbo.sp_IniciarSesion;   -- se borra si ya exist?a, para poder volver a ejecutar el script
 GO
 CREATE PROCEDURE dbo.sp_IniciarSesion
@@ -79,8 +79,8 @@ BEGIN
             , @flagEsAdministrador AS EsAdministrador;
     END TRY
     BEGIN CATCH
-        -- Error inesperado (por ejemplo, falla al escribir en la bitácora):
-        -- se guarda en ErrorBD con el procedimiento común y la web recibe 50000
+        -- Error inesperado (por ejemplo, falla al escribir en la bitacora):
+        -- se guarda en ErrorBD con el procedimiento comun y la web recibe 50000
         -- en vez de un error crudo.
         EXEC dbo.sp_RegistrarError;
 
@@ -89,14 +89,14 @@ BEGIN
 END
 GO
 
-/* --------------------------------------------------------------------------
+/* 
    sp_ListarCuentasUsuario
    Devuelve las cuentas que el usuario puede ver. El administrador ve todas.
 
    Entrada : @inIdUsuario INT
    Salida  : @outResultCode  0 = exito, 50002 = usuario inexistente
    Consulta: IdCuenta, NumeroCuenta, Saldo, NombreTipoCuenta
-   -------------------------------------------------------------------------- */
+  */
 DROP PROCEDURE IF EXISTS dbo.sp_ListarCuentasUsuario;
 GO
 CREATE PROCEDURE dbo.sp_ListarCuentasUsuario
@@ -155,8 +155,8 @@ BEGIN
         END;
     END TRY
     BEGIN CATCH
-        -- Error inesperado (por ejemplo, falla al escribir en la bitácora):
-        -- se guarda en ErrorBD con el procedimiento común y la web recibe 50000
+        -- Error inesperado (por ejemplo, falla al escribir en la bitacora):
+        -- se guarda en ErrorBD con el procedimiento comun y la web recibe 50000
         -- en vez de un error crudo.
         EXEC dbo.sp_RegistrarError;
 
@@ -165,14 +165,14 @@ BEGIN
 END
 GO
 
-/* --------------------------------------------------------------------------
+/* 
    sp_CerrarSesion
    Registra el logout en la bitacora (usuario, operacion, fecha y hora).
    Es una sola escritura (dentro de sp_RegistrarBitacora): sin transaccion.
 
    Entrada : @inIdUsuario INT
    Salida  : @outResultCode  0 = exito, 50002 = usuario inexistente
-   -------------------------------------------------------------------------- */
+    */
 DROP PROCEDURE IF EXISTS dbo.sp_CerrarSesion;
 GO
 CREATE PROCEDURE dbo.sp_CerrarSesion
@@ -209,8 +209,8 @@ BEGIN
         END;
     END TRY
     BEGIN CATCH
-        -- Error inesperado (por ejemplo, falla al escribir en la bitácora):
-        -- se guarda en ErrorBD con el procedimiento común y la web recibe 50000
+        -- Error inesperado (por ejemplo, falla al escribir en la bitacora):
+        -- se guarda en ErrorBD con el procedimiento comun y la web recibe 50000
         -- en vez de un error crudo.
         EXEC dbo.sp_RegistrarError;
 

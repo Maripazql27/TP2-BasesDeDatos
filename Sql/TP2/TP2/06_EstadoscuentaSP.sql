@@ -1,11 +1,11 @@
-/* ==========================================================================
-   TP2 - Base de Datos 1 - Cuenta de Ahorros
-   Script 06: consulta de estados de cuenta 
-   ========================================================================== */
+
+   --TP2 - Base de Datos 1 - Cuenta de Ahorros
+   --Script 06: consulta de estados de cuenta 
+
 USE CuentaAhorrosTP2;   
 GO
 
-/* --------------------------------------------------------------------------
+/* 
    sp_ConsultarEstadosCuenta
    Devuelve los ultimos 8 estados de cuenta de una cuenta, del mas reciente
    al menos reciente, y registra la consulta en la bitacora.
@@ -21,7 +21,7 @@ GO
              SaldoInicial, SaldoFinal, SaldoMinimo, InteresesAcumulados,
              CantRetiros, CantDepositos, CantSinpeEntrantes,
              CantSinpeSalientes
-			---------- */
+	*/
 DROP PROCEDURE IF EXISTS dbo.sp_ConsultarEstadosCuenta;
 GO
 CREATE PROCEDURE dbo.sp_ConsultarEstadosCuenta
@@ -68,7 +68,7 @@ BEGIN
         END
         ELSE
         BEGIN
-            -- el cliente solo si esa cuenta está asociada a él
+            -- el cliente solo si esa cuenta esta asociada a el
             IF EXISTS (SELECT 1
                        FROM dbo.UsuarioPuedeVer V
                        WHERE V.IdUsuario = @inIdUsuario
@@ -85,7 +85,7 @@ BEGIN
         END;
 
         -- Paso 3: dejar constancia de la consulta (solo llega aqui quien tiene acceso).
-        -- sp_RegistrarBitacora (Persona 1) devuelve @outResultCode (OUTPUT).
+        -- sp_RegistrarBitacora  devuelve @outResultCode (OUTPUT).
         DECLARE @codigoBitacora INT;
         EXEC dbo.sp_RegistrarBitacora
             @inIdUsuario = @inIdUsuario
@@ -121,8 +121,8 @@ BEGIN
         ORDER BY E.FechaFin DESC, E.Id DESC;
     END TRY
     BEGIN CATCH
-        -- Error inesperado (por ejemplo, falla al escribir en la bitácora):
-        -- se guarda en ErrorBD con el procedimiento común y la web recibe 50000
+        -- Error inesperado (por ejemplo, falla al escribir en la bitacora):
+        -- se guarda en ErrorBD con el procedimiento comun y la web recibe 50000
         -- en vez de un error crudo.
         EXEC dbo.sp_RegistrarError;
 

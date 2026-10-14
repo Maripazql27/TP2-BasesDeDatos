@@ -1,11 +1,11 @@
-USE CuentaAhorrosTP2;   -- base oficial (Persona 1)
+USE CuentaAhorrosTP2;   -- base oficial de la TP2
 GO
 
-/* --------------------------------------------------------------------------
+/* 
    sp_RegistrarError
-   Guarda en dbo.ErrorBD los datos del error que se est? atendiendo en el
-   CATCH que lo llam? (n?mero, severidad, estado, procedimiento donde ocurri?,
-   l?nea y mensaje).
+   Guarda en dbo.ErrorBD los datos del error que se este atendiendo en el
+   CATCH que lo llama (numero, severidad, estado, procedimiento donde ocurrio,
+   linea y mensaje).
 
    Solo se debe llamar DENTRO de un bloque CATCH. Las funciones ERROR_NUMBER(),
    ERROR_MESSAGE(), etc. devuelven los datos del error original aunque se
@@ -19,7 +19,7 @@ GO
          EXEC dbo.sp_RegistrarError;
          SET @outResultCode = 50000;
      END CATCH;
-   -------------------------------------------------------------------------- */
+*/
 DROP PROCEDURE IF EXISTS dbo.sp_RegistrarError;
 GO
 CREATE PROCEDURE dbo.sp_RegistrarError
