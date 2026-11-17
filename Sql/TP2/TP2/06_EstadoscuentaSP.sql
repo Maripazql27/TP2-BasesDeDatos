@@ -93,7 +93,7 @@ BEGIN
             , @inIP = NULL
             , @inJsonAntes = NULL        -- consultar no modifica datos
             , @inJsonDespues = NULL
-            , @outResultCode = @codigoBitacora OUTPUT;
+            , @outResultCode = @codigoBitacora OUTPUT;
         IF (@codigoBitacora <> 0)
         BEGIN
             SET @outResultCode = @codigoBitacora;   -- la bitacora fallo: se devuelve su codigo

@@ -66,7 +66,7 @@ BEGIN
             , @inIP = @inIP
             , @inJsonAntes = NULL        -- un login no cambia datos, asi que no hay "antes"
             , @inJsonDespues = NULL
-            , @outResultCode = @codigoBitacora OUTPUT;
+            , @outResultCode = @codigoBitacora OUTPUT;
         IF (@codigoBitacora <> 0)
         BEGIN
             SET @outResultCode = @codigoBitacora;   -- la bitacora fallo: se devuelve su codigo
@@ -201,7 +201,7 @@ BEGIN
             , @inIP = NULL               -- el logout no guarda IP
             , @inJsonAntes = NULL
             , @inJsonDespues = NULL
-            , @outResultCode = @codigoBitacora OUTPUT;
+            , @outResultCode = @codigoBitacora OUTPUT;
         IF (@codigoBitacora <> 0)
         BEGIN
             SET @outResultCode = @codigoBitacora;   -- la bitacora fallo: se devuelve su codigo
