@@ -105,3 +105,16 @@ SELECT Id, Nombre, Accion, flagGeneraComprobante
 FROM dbo.TipoMovimiento
 ORDER BY Id;
 GO
+
+
+
+---Pruebas del SP cargar catalogos
+-- Prueba 2: no debe cargar dos veces (esperado: 50300)
+DECLARE @x XML = N'<Catalogos><Tipo_Doc/></Catalogos>';
+DECLARE @r INT;
+EXEC dbo.sp_CargarCatalogos @inXml = @x, @outResultCode = @r OUTPUT;
+SELECT @r AS Codigo_Prueba2;
+
+-- Prueba 3: XML nulo (esperado: 50007)
+EXEC dbo.sp_CargarCatalogos @inXml = NULL, @outResultCode = @r OUTPUT;
+SELECT @r AS Codigo_Prueba3;
