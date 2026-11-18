@@ -1,9 +1,7 @@
-// =============================================================================
-// Estados.jsx — ESTADOS DE CUENTA DE UNA CUENTA (TP3)
 // Pide los estados con consultarEstados() (sp_ConsultarEstadosCuenta): todos,
 // del más reciente al más antiguo. Al hacer clic en uno se abre el detalle con
-// sus movimientos (pantalla Movimientos.jsx).
-// =============================================================================
+// sus movimientos (pantalla Movimientos.jsx). Al navegar se le pasa la fila
+// del estado elegido, para que esa pantalla muestre también sus valores.
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { consultarEstados } from '../api';
@@ -37,7 +35,7 @@ export default function Estados() {
   }
 
   return (
-    <main className="pagina">
+    <main className="pagina pagina-ancha">
       <header className="encabezado">
         <h1>Estados de cuenta {numeroCuenta}</h1>
         <Link to="/cuentas">Volver a mis cuentas</Link>
@@ -71,7 +69,11 @@ export default function Estados() {
                   <tr
                     key={e.IdEstadoCuenta}
                     className="fila-clic"
-                    onClick={() => navegar(`/cuentas/${numeroCuenta}/estados/${e.IdEstadoCuenta}`)}
+                    onClick={() =>
+                      navegar(`/cuentas/${numeroCuenta}/estados/${e.IdEstadoCuenta}`, {
+                        state: { estado: e },
+                      })
+                    }
                   >
                     <td>{e.FechaEmision}</td>
                     <td>{e.FechaInicio}</td>

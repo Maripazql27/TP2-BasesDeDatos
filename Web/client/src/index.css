@@ -122,3 +122,42 @@ select {
   width: 90px;
   margin-top: 0;
 }
+
+
+/* Resumen en tarjetas (detalle de un estado de cuenta y control de la simulación) */
+.pagina-ancha {
+  max-width: 1400px;
+}
+.resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.resumen > div {
+  background: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+.resumen span {
+  display: block;
+  font-size: 0.85em;
+  color: #555;
+}
+.resumen strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.1em;
+}
+.fila-pendiente {
+  background: #fff3cd;
+}
+.estado-ok {
+  color: #146c2e;
+  font-weight: bold;
+}
+.estado-pendiente {
+  color: #b45309;
+  font-weight: bold;
+}

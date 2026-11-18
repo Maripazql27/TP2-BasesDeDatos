@@ -10,6 +10,12 @@
      (el simulador igual recorre todas las fechas).
 
    Todo el dia va en UNA transaccion: o entra todo o no entra nada.
+   Dentro de esa misma transaccion marca las altas del dia como hechas en
+   dbo.ControlSimulacion: si las altas se confirman, la marca
+   tambien; si se deshacen, la marca tampoco queda. Asi una reanudacion de
+   la simulacion nunca repite ni salta las altas de un dia. Si no existe la
+   fila de control de esa fecha (por ejemplo en Pruebas_AltasDia.sql), el
+   UPDATE no cambia nada.
    No llama a otros SP. Los errores se guardan en dbo.ErrorBD desde aqui.
 
    Codigos de salida (@outResultCode):
@@ -109,6 +115,11 @@ BEGIN
 
     BEGIN TRY
         BEGIN TRANSACTION;
+
+        -- Marca de control de la simulacion (lo menos importante va primero)
+        UPDATE dbo.ControlSimulacion
+        SET FlagAltasProcesadas = @true
+        WHERE FechaOperacion = @inFecha;
 
         --Personas
         INSERT INTO dbo.Persona (

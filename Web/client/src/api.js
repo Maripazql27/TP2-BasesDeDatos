@@ -1,4 +1,3 @@
-
 //CAPA DE ACCESO A DATOS DE LA WEB
 // ESTADO DE LA CONEXIÓN
 //     iniciarSesion          -> POST /api/login   -> sp_IniciarSesion
@@ -9,13 +8,14 @@
 //                                                 -> sp_ConsultarEstadosCuenta
 //     consultarMovimientos   -> GET  /api/cuentas/:numero/estados/:id/movimientos
 //                                                 -> sp_ConsultarMovimientosEstadoCuenta
-
+//     consultarControlSimulacion -> GET /api/simulacion/control
+//                                                 -> sp_ConsultarControlSimulacion
 
 // Hace UNA petición al servidor y siempre devuelve un objeto { ok, ... }.
-//   - Usa direcciones relativas ('/api/...'): en desarrollo, Vite las reenvía
+//   Usa direcciones relativas ('/api/...'): en desarrollo, Vite las reenvía
 //     al servidor Express (ver "proxy" en vite.config.js). Como el navegador
 //     cree que habla con un solo sitio, la cookie de sesión viaja sola.
-//   - Si el servidor no responde (apagado, sin red), no lanza error: devuelve
+//    Si el servidor no responde (apagado, sin red), no lanza error: devuelve
 //     { ok:false, codigo:50000, mensaje } para que la pantalla lo muestre.
 async function pedir(metodo, ruta, cuerpo) {
   try {
@@ -71,8 +71,13 @@ export function consultarMovimientos(numeroCuenta, idEstadoCuenta) {
   );
 }
 
+// Control de la simulación (solo lectura): { ok, resumen, corridas, fechas }.
+export function consultarControlSimulacion() {
+  return pedir('GET', '/api/simulacion/control');
+}
+
 // ---------------------------------------------------------------- BENEFICIARIOS
-// Todas llaman al servidor, que llama al SP correspondiente (no hay datos de prueba aquí).
+// Todas llaman al servidor, que llama al SP correspondiente.
 //   listarParentezcos      -> GET    /api/catalogos/parentezcos        -> sp_ListarParentezcos
 //   listarTiposDocumento   -> GET    /api/catalogos/tipos-documento    -> sp_ListarTiposDocumento
 //   listarBeneficiarios    -> GET    /api/cuentas/:n/beneficiarios     -> sp_ListarBeneficiarios

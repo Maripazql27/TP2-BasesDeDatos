@@ -1,9 +1,8 @@
-// =============================================================================
-// LISTA DE CUENTAS DEL USUARIO
+
 // Al abrirse pide las cuentas con listarCuentas() (sp_ListarCuentasUsuario)
 // y las muestra en una lista. Cada cuenta tiene enlaces a sus beneficiarios y
 // a sus estados de cuenta.
-// =============================================================================
+
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { listarCuentas, cerrarSesion } from '../api';
@@ -51,6 +50,8 @@ export default function Cuentas({ usuario, onLogout }) {
       <header className="encabezado">
         <h1>Mis cuentas</h1>
         <div>
+          <Link to="/simulacion">Control de la simulación</Link>
+          {' | '}
           <span>Hola, {usuario.nombreUsuario}. </span>
           <button onClick={salir}>Cerrar sesión</button>
         </div>

@@ -1,12 +1,11 @@
-
 // App.jsx — COMPONENTE RAÍZ: define las rutas (URLs) y quién tiene sesión.
-
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/login';
 import Cuentas from './pages/cuentas';
 import Estados from './pages/Estados';
 import Movimientos from './pages/Movimientos';
+import Simulacion from './pages/Simulacion';
 import Beneficiarios from './pages/Beneficiarios';
 import { obtenerSesion } from './api';
 
@@ -72,6 +71,14 @@ export default function App() {
           element={
             <RutaProtegida usuario={usuario}>
               <Beneficiarios />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/simulacion"
+          element={
+            <RutaProtegida usuario={usuario}>
+              <Simulacion />
             </RutaProtegida>
           }
         />

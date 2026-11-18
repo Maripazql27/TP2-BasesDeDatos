@@ -1,5 +1,6 @@
 
 
+
 // ARMA EL SERVIDOR EXPRESS (sesión + rutas + manejo de errores)
 
 import express from 'express';
@@ -7,6 +8,7 @@ import session from 'express-session';
 import { crearRutasSesion } from './rutas/Sesion.js';
 import { crearRutasCuentas } from './rutas/Cuentas.js';
 import { crearRutasBeneficiarios } from './rutas/beneficiarios.js';
+import { crearRutasSimulacion } from './rutas/Simulacion.js';
 
 export function crearApp(ejecutarSP, { secreto, produccion = false } = {}) {
   const app = express();
@@ -43,6 +45,7 @@ export function crearApp(ejecutarSP, { secreto, produccion = false } = {}) {
   // Rutas. Todas viven bajo /api para distinguirlas de la web.
   app.use('/api', crearRutasSesion(ejecutarSP));
   app.use('/api/cuentas', crearRutasCuentas(ejecutarSP));
+  app.use('/api/simulacion', crearRutasSimulacion(ejecutarSP));
   app.use('/api', crearRutasBeneficiarios(ejecutarSP));
 
   // Cualquier otra dirección de /api que no exista responde 501 en vez de inventar datos.
