@@ -1,6 +1,5 @@
 /*
 
-   script de simulacion.
 
    Recorre TODAS las fechas del XML de operaciones, una por una y en orden
    ascendente (aunque la fecha no tenga nodo FechaOperacion). Por cada dia:
@@ -11,6 +10,7 @@
       3. Cierres:     cuentas cuyo estado vence ese dia, con
                       EXEC dbo.sp_CerrarYAbrirEstadoCuenta
 
+
    Si falla un alta o un cierre, la simulacion SE DETIENE en esa fecha (para
    no saltarse un dia) y deja el error en dbo.ErrorBD. Si un movimiento es
    rechazado (fondos insuficientes, etc.) se registra en dbo.ErrorBD y la
@@ -20,7 +20,7 @@
    trigger de apertura, y los SP sp_CargarAltasDia, sp_AplicarMovimiento y
    sp_CerrarYAbrirEstadoCuenta creados.
    Correr sobre una base SIN cuentas (no es reejecutable todavia: el control
-   de reanudacion llega en la parte web).
+   de reanudacion llega en web)
 */
 USE CuentaAhorrosTP2;
 GO
@@ -366,7 +366,6 @@ DECLARE @idEstadoNuevo INT;
 DECLARE @i INT;
 DECLARE @cantMov INT;
 DECLARE @j INT;
-DECLARE @cantCierres INT;
 DECLARE @numeroCuenta VARCHAR(16);
 DECLARE @tipoMov VARCHAR(64);
 DECLARE @monto DECIMAL(18,2);
@@ -396,7 +395,7 @@ WHILE (@fecha <= @fechaFin AND @flagDetener = @false)
 BEGIN
     SET @fechaTexto = CONVERT(VARCHAR(10), @fecha, 23);   -- yyyy-mm-dd
 
-    --ALTAS DEL DIA
+    -- 1. ALTAS DEL DIA
     EXEC dbo.sp_CargarAltasDia
         @inXml = @xmlOperaciones,
         @inFecha = @fecha,
@@ -412,7 +411,7 @@ BEGIN
         SET @flagDetener = @true;
     END;
 
-    -- MOVIMIENTOS DEL DIA, en el orden del XML
+    -- 2. MOVIMIENTOS DEL DIA, en el orden del XML
     IF (@flagDetener = @false)
     BEGIN
         SELECT @cantMov = COUNT(*)
@@ -467,7 +466,7 @@ BEGIN
         END;
     END;
 
-    -- CIERRES DEL DIA (estados que vencen hoy)
+    -- 3. CIERRES DEL DIA (estados que vencen hoy)
     IF (@flagDetener = @false)
     BEGIN
         DELETE FROM @cierres;
@@ -480,10 +479,11 @@ BEGIN
         WHERE E.FechaFin = @fecha
         ORDER BY C.Id;
 
-        SELECT @cantCierres = COUNT(*) FROM @cierres;
+        -- Se recorre por la llave Orden. DELETE no reinicia el IDENTITY de la
+        -- tabla variable, asi que no se puede asumir que empieza en 1.
+        SELECT @j = MIN(Orden) FROM @cierres;
 
-        SET @j = 1;
-        WHILE (@j <= @cantCierres AND @flagDetener = @false)
+        WHILE (@j IS NOT NULL AND @flagDetener = @false)
         BEGIN
             SELECT @numeroCuenta = NumeroCuenta
             FROM @cierres
@@ -509,7 +509,7 @@ BEGIN
                 SET @flagDetener = @true;
             END;
 
-            SET @j = @j + 1;
+            SELECT @j = MIN(Orden) FROM @cierres WHERE Orden > @j;
         END;
     END;
 
