@@ -66,12 +66,18 @@ table {
 th,
 td {
   border: 1px solid #d0d0d0;
-  padding: 6px 8px;
+  padding: 8px 14px;
   text-align: left;
   white-space: nowrap;
 }
 th {
   background: #e6f1fb;
+}
+/* Columnas de montos y cantidades: a la derecha y con cifras de ancho fijo,
+   para que unidades, decenas y centésimos queden uno debajo del otro. */
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 .fila-clic {
   cursor: pointer;
@@ -147,6 +153,7 @@ select {
 }
 .resumen strong {
   display: block;
+  font-variant-numeric: tabular-nums;
   margin-top: 4px;
   font-size: 1.1em;
 }

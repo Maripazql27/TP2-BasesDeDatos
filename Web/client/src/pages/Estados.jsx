@@ -5,11 +5,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { consultarEstados } from '../api';
-
-const formatoMoneda = new Intl.NumberFormat('es-CR', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+import { dinero as formatearDinero } from '../formato';
 
 export default function Estados() {
   // useParams lee la parte variable de la URL: /cuentas/ESTE_VALOR/estados
@@ -31,7 +27,7 @@ export default function Estados() {
 
   // Si el SP devuelve el símbolo de la moneda se muestra; si no, no se muestra nada.
   function dinero(e, valor) {
-    return `${e.SimboloMoneda ?? ''} ${formatoMoneda.format(valor)}`.trim();
+    return formatearDinero(e.SimboloMoneda, valor);
   }
 
   return (
@@ -55,13 +51,13 @@ export default function Estados() {
                   <th>Emisión</th>
                   <th>Inicio</th>
                   <th>Fin</th>
-                  <th>Saldo inicial</th>
-                  <th>Saldo final</th>
-                  <th>Saldo mínimo</th>
-                  <th>Intereses</th>
-                  <th>Operaciones ATM</th>
-                  <th>Operaciones cajero humano</th>
-                  <th>Operaciones SINPE</th>
+                  <th className="num">Saldo inicial</th>
+                  <th className="num">Saldo final</th>
+                  <th className="num">Saldo mínimo</th>
+                  <th className="num">Intereses</th>
+                  <th className="num">Operaciones ATM</th>
+                  <th className="num">Operaciones cajero humano</th>
+                  <th className="num">Operaciones SINPE</th>
                 </tr>
               </thead>
               <tbody>
@@ -78,13 +74,13 @@ export default function Estados() {
                     <td>{e.FechaEmision}</td>
                     <td>{e.FechaInicio}</td>
                     <td>{e.FechaFin}</td>
-                    <td>{dinero(e, e.SaldoInicial)}</td>
-                    <td>{dinero(e, e.SaldoFinal)}</td>
-                    <td>{dinero(e, e.SaldoMinimo)}</td>
-                    <td>{dinero(e, e.InteresesAcumulados)}</td>
-                    <td>{e.CantOperacionesATM}</td>
-                    <td>{e.CantOperacionesHumano}</td>
-                    <td>{e.CantOperacionesSinpe}</td>
+                    <td className="num">{dinero(e, e.SaldoInicial)}</td>
+                    <td className="num">{dinero(e, e.SaldoFinal)}</td>
+                    <td className="num">{dinero(e, e.SaldoMinimo)}</td>
+                    <td className="num">{dinero(e, e.InteresesAcumulados)}</td>
+                    <td className="num">{e.CantOperacionesATM}</td>
+                    <td className="num">{e.CantOperacionesHumano}</td>
+                    <td className="num">{e.CantOperacionesSinpe}</td>
                   </tr>
                 ))}
               </tbody>

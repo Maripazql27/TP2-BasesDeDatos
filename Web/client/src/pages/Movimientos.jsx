@@ -5,15 +5,10 @@
 // XML), monto en la moneda de la cuenta (negativo si es débito) y nuevo saldo.
 // Los valores del estado llegan desde la lista de estados al hacer clic; si la
 // página se abre directo (sin pasar por la lista) se piden con consultarEstados().
-
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { consultarEstados, consultarMovimientos } from '../api';
-
-const formatoMoneda = new Intl.NumberFormat('es-CR', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+import { dinero as formatearDinero } from '../formato';
 
 export default function Movimientos() {
   const { numeroCuenta, idEstado } = useParams();
@@ -53,7 +48,7 @@ export default function Movimientos() {
   const nombreMoneda = movimientos[0]?.NombreMoneda ?? '';
 
   function dinero(valor) {
-    return `${simbolo} ${formatoMoneda.format(valor)}`.trim();
+    return formatearDinero(simbolo, valor);
   }
 
   return (
@@ -125,8 +120,8 @@ export default function Movimientos() {
                   <th>Fecha</th>
                   <th>Tipo</th>
                   <th>Descripción</th>
-                  <th>Monto</th>
-                  <th>Nuevo saldo</th>
+                  <th className="num">Monto</th>
+                  <th className="num">Nuevo saldo</th>
                 </tr>
               </thead>
               <tbody>
@@ -135,8 +130,8 @@ export default function Movimientos() {
                     <td>{m.FechaMovimiento}</td>
                     <td>{m.TipoMovimiento}</td>
                     <td>{m.Descripcion}</td>
-                    <td>{`${m.SimboloMoneda} ${formatoMoneda.format(m.MontoConSigno)}`}</td>
-                    <td>{`${m.SimboloMoneda} ${formatoMoneda.format(m.SaldoPosterior)}`}</td>
+                    <td className="num">{formatearDinero(m.SimboloMoneda, m.MontoConSigno)}</td>
+                    <td className="num">{formatearDinero(m.SimboloMoneda, m.SaldoPosterior)}</td>
                   </tr>
                 ))}
               </tbody>

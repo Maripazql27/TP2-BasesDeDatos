@@ -101,11 +101,19 @@ BEGIN
             E.CantOperacionesHumano,
             E.CantRetirosHumano,
 
-            -- Total de operaciones SINPE 
+                       -- Total de operaciones SINPE 
             E.CantSinpeEntrantes + E.CantSinpeSalientes
-                AS CantOperacionesSinpe
+                AS CantOperacionesSinpe,
+
+            -- moneda de la cuenta
+            TM.Simbolo AS SimboloMoneda,
+            TM.Nombre  AS NombreMoneda
 
         FROM dbo.EstadoCuenta AS E
+        --para la moneda de la cuenta
+        INNER JOIN dbo.Cuenta AS C ON C.Id = E.IdCuenta
+        INNER JOIN dbo.TipoCuentaAhorro AS TC ON TC.Id = C.IdTipoCuentaAhorro
+        INNER JOIN dbo.TipoMoneda AS TM ON TM.Id = TC.IdTipoMoneda
         WHERE E.IdCuenta = @idCuenta
         ORDER BY E.FechaFin DESC, E.Id DESC;
 
