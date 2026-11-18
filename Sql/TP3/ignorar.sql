@@ -58,3 +58,36 @@ SELECT (SELECT COUNT(*) FROM dbo.Persona)        AS Personas,
        (SELECT COUNT(*) FROM dbo.ErrorBD)        AS Errores,
        (SELECT COUNT(*) FROM dbo.TipoMovimiento) AS TiposMov_esperado_18;
 GO
+
+
+
+
+USE CuentaAhorrosTP2;
+
+SELECT E.Nombre AS SP_Que_Falta, E.Usado_Por
+FROM (
+    SELECT 'sp_CargarCatalogos' AS Nombre, 'Carga de catalogos' AS Usado_Por
+    UNION ALL SELECT 'sp_CargarAltasDia',                    'Simulacion'
+    UNION ALL SELECT 'sp_AplicarMovimiento',                 'Simulacion'
+    UNION ALL SELECT 'sp_CerrarYAbrirEstadoCuenta',          'Simulacion'
+    UNION ALL SELECT 'sp_RegistrarBitacora',                 'Web y SP de consulta'
+    UNION ALL SELECT 'sp_RegistrarError',                    'Web y SP de consulta'
+    UNION ALL SELECT 'sp_IniciarSesion',                     'Web: login'
+    UNION ALL SELECT 'sp_CerrarSesion',                      'Web: logout'
+    UNION ALL SELECT 'sp_ListarCuentasUsuario',              'Web: mis cuentas'
+    UNION ALL SELECT 'sp_ConsultarEstadosCuenta',            'Web: estados'
+    UNION ALL SELECT 'sp_ConsultarMovimientosEstadoCuenta',  'Web: movimientos'
+    UNION ALL SELECT 'sp_ListarParentezcos',                 'Web: beneficiarios'
+    UNION ALL SELECT 'sp_ListarTiposDocumento',              'Web: beneficiarios'
+    UNION ALL SELECT 'sp_ListarBeneficiarios',               'Web: beneficiarios'
+    UNION ALL SELECT 'sp_AgregarBeneficiario',               'Web: beneficiarios'
+    UNION ALL SELECT 'sp_ActualizarBeneficiario',            'Web: beneficiarios'
+    UNION ALL SELECT 'sp_EliminarBeneficiario',              'Web: beneficiarios'
+) AS E
+LEFT JOIN sys.procedures AS P
+    ON P.name = E.Nombre
+WHERE P.name IS NULL;
+
+-- Y el trigger de apertura de estado:
+SELECT 'tr_Cuenta_AperturaEstadoCuenta' AS Trigger_Que_Falta
+WHERE NOT EXISTS (SELECT 1 FROM sys.triggers WHERE name = 'tr_Cuenta_AperturaEstadoCuenta');
