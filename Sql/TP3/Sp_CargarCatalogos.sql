@@ -2,7 +2,7 @@ USE CuentaAhorrosTP2;
 GO
 
 /*
-TP3 - sp_CargarCatalogos
+sp_CargarCatalogos
 Carga los catalogos del XML de la tarea 3 (CatalogosTarea3.xml).
 Reemplaza al sp_CargarCatalogos de TP2, que ya no sirve porque
 TipoCuentaAhorro cambio de columnas y ahora hay TipoMovimiento.
