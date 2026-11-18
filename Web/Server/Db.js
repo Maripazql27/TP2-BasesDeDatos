@@ -7,7 +7,11 @@ const configuracion = {
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  options: { encrypt: true, trustServerCertificate: true },
+  options: {
+    encrypt: true,
+    trustServerCertificate: true,
+    serverName: process.env.DB_SERVERNAME || undefined,   // <- nueva
+  },
   pool: { max: 5, min: 0, idleTimeoutMillis: 30000 },
 };
 
