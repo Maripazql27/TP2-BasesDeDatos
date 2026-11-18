@@ -44,6 +44,19 @@ export function exigirSesion(req, res, next) {
   next();
 }
 
+// Middleware: deja pasar solo al administrador. Se usa DESPUÉS de exigirSesion.
+// Un usuario normal recibe 403, aunque escriba la dirección a mano.
+export function exigirAdmin(req, res, next) {
+  if (!req.session.esAdministrador) {
+    return res.status(403).json({
+      ok: false,
+      codigo: 50002,
+      mensaje: 'Solo el administrador puede ver esta página.',
+    });
+  }
+  next();
+}
+
 // Las fechas (DATE) llegan de SQL Server como objetos Date a medianoche UTC.
 // La web las muestra tal cual, así que se convierten a texto 'AAAA-MM-DD'.
 export function fechaATexto(valor) {

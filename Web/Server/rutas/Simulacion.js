@@ -1,11 +1,11 @@
-//  CONTROL DE LA SIMULACIÓN (solo lectura, con sesión iniciada)
+//  CONTROL DE LA SIMULACIÓN (solo lectura, SOLO PARA EL ADMINISTRADOR)
 //   GET /api/simulacion/control -> sp_ConsultarControlSimulacion
 // Muestra lo que deja Simulacion_TP3.sql en dbo.CorridaSimulacion y
 // dbo.ControlSimulacion: qué fechas están terminadas, cuál quedó a medias y
 // desde dónde reanuda la siguiente corrida. No cambia nada en la base.
 
 import { Router } from 'express';
-import { exigirSesion, responderError, fechaATexto } from './Comunes.js';
+import { exigirSesion, exigirAdmin, responderError, fechaATexto } from './Comunes.js';
 
 // Las fechas con hora (DATETIME2) llegan como objetos Date. Se muestran como
 // texto 'AAAA-MM-DD hh:mm:ss', con la misma hora que guardó SQL Server.
@@ -15,7 +15,8 @@ function fechaHoraATexto(valor) {
 
 export function crearRutasSimulacion(ejecutarSP) {
   const router = Router();
-  router.use(exigirSesion); // todas las rutas de este archivo exigen sesión
+  // Todas las rutas de este archivo exigen sesión Y que sea el administrador.
+  router.use(exigirSesion, exigirAdmin);
 
   router.get('/control', async (req, res, next) => {
     try {

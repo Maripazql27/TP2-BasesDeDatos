@@ -42,9 +42,9 @@ DECLARE @codigoPeriodoCerrado   INT = 50303;  -- de sp_CerrarYAbrirEstadoCuenta
 -- SOLO PARA LA PRUEBA DE REANUDACION (Pruebas_ReanudacionSimulacion.sql):
 -- detienen la corrida a proposito, como si fallara. En una corrida normal
 -- las tres quedan en NULL.
-DECLARE @pruebaFechaDetener           DATE = NULL;  -- ej. '2026-04-01'
-DECLARE @pruebaDetenerTrasMovimientos INT  = NULL;  -- ej. 3
-DECLARE @pruebaDetenerTrasCierres     INT  = NULL;  -- ej. 1
+DECLARE @pruebaFechaDetener           DATE = Null;  -- ej. '2026-04-01'
+DECLARE @pruebaDetenerTrasMovimientos INT  = Null;  -- ej. 3
+DECLARE @pruebaDetenerTrasCierres     INT  = Null;  -- ej. 1
 
 -- XML de operaciones (el archivo OperacionesTarea3.xml del profesor)
 DECLARE @xmlOperaciones XML = N'<!-- Simulación - Tercera Tarea Programada - Bases de Datos I.

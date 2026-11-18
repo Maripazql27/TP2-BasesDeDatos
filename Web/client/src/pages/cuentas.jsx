@@ -50,8 +50,12 @@ export default function Cuentas({ usuario, onLogout }) {
       <header className="encabezado">
         <h1>Mis cuentas</h1>
         <div>
-          <Link to="/simulacion">Control de la simulación</Link>
-          {' | '}
+          {usuario.esAdministrador && (
+            <>
+              <Link to="/simulacion">Control de la simulación</Link>
+              {' | '}
+            </>
+          )}
           <span>Hola, {usuario.nombreUsuario}. </span>
           <button onClick={salir}>Cerrar sesión</button>
         </div>

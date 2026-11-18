@@ -15,6 +15,14 @@ function RutaProtegida({ usuario, children }) {
   return usuario ? children : <Navigate to="/login" replace />;
 }
 
+// Solo el administrador entra. Sin sesión va al login; un usuario normal vuelve
+// a sus cuentas. (El servidor también lo exige: esto es solo para que la
+// pantalla no se muestre en vano.)
+function RutaAdministrador({ usuario, children }) {
+  if (!usuario) return <Navigate to="/login" replace />;
+  return usuario.esAdministrador ? children : <Navigate to="/cuentas" replace />;
+}
+
 export default function App() {
   // Usuario en sesión (null = nadie). La sesión REAL vive en el servidor; aquí
   // solo se guarda una copia para saber qué mostrar.
@@ -77,9 +85,9 @@ export default function App() {
         <Route
           path="/simulacion"
           element={
-            <RutaProtegida usuario={usuario}>
+            <RutaAdministrador usuario={usuario}>
               <Simulacion />
-            </RutaProtegida>
+            </RutaAdministrador>
           }
         />
         {/* Cualquier otra dirección vuelve al login */}
