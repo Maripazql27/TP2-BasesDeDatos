@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/login';
 import Cuentas from './pages/cuentas';
 import Estados from './pages/Estados';
+import Movimientos from './pages/Movimientos';
 import Beneficiarios from './pages/Beneficiarios';
 import { obtenerSesion } from './api';
 
@@ -55,6 +56,14 @@ export default function App() {
           element={
             <RutaProtegida usuario={usuario}>
               <Estados />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/cuentas/:numeroCuenta/estados/:idEstado"
+          element={
+            <RutaProtegida usuario={usuario}>
+              <Movimientos />
             </RutaProtegida>
           }
         />

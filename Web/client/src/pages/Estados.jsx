@@ -1,11 +1,11 @@
 // =============================================================================
-// Estados.jsx — LISTA DE LOS ÚLTIMOS 8 ESTADOS DE CUENTA
-// Toma el número de cuenta de la URL, pide los estados con consultarEstados()
-// (real: sp_ConsultarEstadosCuenta, que devuelve máximo 8, del más reciente al
-// más antiguo, y registra la consulta en la bitácora) y los muestra en una tabla.
+// Estados.jsx — ESTADOS DE CUENTA DE UNA CUENTA (TP3)
+// Pide los estados con consultarEstados() (sp_ConsultarEstadosCuenta): todos,
+// del más reciente al más antiguo. Al hacer clic en uno se abre el detalle con
+// sus movimientos (pantalla Movimientos.jsx).
 // =============================================================================
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { consultarEstados } from '../api';
 
 const formatoMoneda = new Intl.NumberFormat('es-CR', {
@@ -16,11 +16,11 @@ const formatoMoneda = new Intl.NumberFormat('es-CR', {
 export default function Estados() {
   // useParams lee la parte variable de la URL: /cuentas/ESTE_VALOR/estados
   const { numeroCuenta } = useParams();
+  const navegar = useNavigate();
   const [estados, setEstados] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
 
-  // Se vuelve a ejecutar si cambia la cuenta.
   useEffect(() => {
     async function cargar() {
       const respuesta = await consultarEstados(numeroCuenta);
@@ -30,6 +30,11 @@ export default function Estados() {
     }
     cargar();
   }, [numeroCuenta]);
+
+  // Si el SP devuelve el símbolo de la moneda se muestra; si no, no se muestra nada.
+  function dinero(e, valor) {
+    return `${e.SimboloMoneda ?? ''} ${formatoMoneda.format(valor)}`.trim();
+  }
 
   return (
     <main className="pagina">
@@ -43,43 +48,47 @@ export default function Estados() {
       {!cargando && !error && estados.length === 0 && <p>No hay estados de cuenta.</p>}
 
       {estados.length > 0 && (
-        <div className="tabla-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Emisión</th>
-                <th>Inicio</th>
-                <th>Fin</th>
-                <th>Saldo inicial</th>
-                <th>Saldo final</th>
-                <th>Saldo mínimo</th>
-                <th>Intereses</th>
-                <th>Retiros</th>
-                <th>Depósitos</th>
-                <th>SINPE entrantes</th>
-                <th>SINPE salientes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {estados.map((e) => (
-                // Cliqueable, pero en TP2 el clic no hace nada (lo pide el enunciado).
-                <tr key={e.IdEstadoCuenta} className="fila-clic" onClick={() => {}}>
-                  <td>{e.FechaEmision}</td>
-                  <td>{e.FechaInicio}</td>
-                  <td>{e.FechaFin}</td>
-                  <td>{formatoMoneda.format(e.SaldoInicial)}</td>
-                  <td>{formatoMoneda.format(e.SaldoFinal)}</td>
-                  <td>{formatoMoneda.format(e.SaldoMinimo)}</td>
-                  <td>{formatoMoneda.format(e.InteresesAcumulados)}</td>
-                  <td>{e.CantRetiros}</td>
-                  <td>{e.CantDepositos}</td>
-                  <td>{e.CantSinpeEntrantes}</td>
-                  <td>{e.CantSinpeSalientes}</td>
+        <>
+          <p>Haga clic en un estado para ver sus movimientos.</p>
+          <div className="tabla-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Emisión</th>
+                  <th>Inicio</th>
+                  <th>Fin</th>
+                  <th>Saldo inicial</th>
+                  <th>Saldo final</th>
+                  <th>Saldo mínimo</th>
+                  <th>Intereses</th>
+                  <th>Operaciones ATM</th>
+                  <th>Operaciones cajero humano</th>
+                  <th>Operaciones SINPE</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {estados.map((e) => (
+                  <tr
+                    key={e.IdEstadoCuenta}
+                    className="fila-clic"
+                    onClick={() => navegar(`/cuentas/${numeroCuenta}/estados/${e.IdEstadoCuenta}`)}
+                  >
+                    <td>{e.FechaEmision}</td>
+                    <td>{e.FechaInicio}</td>
+                    <td>{e.FechaFin}</td>
+                    <td>{dinero(e, e.SaldoInicial)}</td>
+                    <td>{dinero(e, e.SaldoFinal)}</td>
+                    <td>{dinero(e, e.SaldoMinimo)}</td>
+                    <td>{dinero(e, e.InteresesAcumulados)}</td>
+                    <td>{e.CantOperacionesATM}</td>
+                    <td>{e.CantOperacionesHumano}</td>
+                    <td>{e.CantOperacionesSinpe}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </main>
   );

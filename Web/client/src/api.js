@@ -1,5 +1,5 @@
 
-// APA DE ACCESO A DATOS DE LA WEB
+//CAPA DE ACCESO A DATOS DE LA WEB
 // ESTADO DE LA CONEXIÓN
 //     iniciarSesion          -> POST /api/login   -> sp_IniciarSesion
 //     cerrarSesion           -> POST /api/logout  -> sp_CerrarSesion
@@ -7,6 +7,8 @@
 //     listarCuentas          -> GET  /api/cuentas -> sp_ListarCuentasUsuario
 //     consultarEstados       -> GET  /api/cuentas/:numero/estados
 //                                                 -> sp_ConsultarEstadosCuenta
+//     consultarMovimientos   -> GET  /api/cuentas/:numero/estados/:id/movimientos
+//                                                 -> sp_ConsultarMovimientosEstadoCuenta
 
 
 // Hace UNA petición al servidor y siempre devuelve un objeto { ok, ... }.
@@ -54,11 +56,19 @@ export function listarCuentas() {
   return pedir('GET', '/api/cuentas');
 }
 
-// Hasta 8 estados de cuenta, del más reciente al más antiguo
+// Todos los estados de cuenta, del más reciente al más antiguo
 // encodeURIComponent protege la dirección si el
 // número trajera caracteres raros.
 export function consultarEstados(numeroCuenta) {
   return pedir('GET', `/api/cuentas/${encodeURIComponent(numeroCuenta)}/estados`);
+}
+
+// Movimientos de un estado de cuenta, en orden cronológico (TP3).
+export function consultarMovimientos(numeroCuenta, idEstadoCuenta) {
+  return pedir(
+    'GET',
+    `/api/cuentas/${encodeURIComponent(numeroCuenta)}/estados/${encodeURIComponent(idEstadoCuenta)}/movimientos`
+  );
 }
 
 // ---------------------------------------------------------------- BENEFICIARIOS
