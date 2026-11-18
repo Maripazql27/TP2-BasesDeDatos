@@ -2,106 +2,168 @@ USE CuentaAhorrosTP2;
 GO
 
 /*
-TP3 - Ejecutar la carga de catalogos (CatalogosTarea3.xml).
-Requiere haber creado antes sp_CargarCatalogos (Sp_CargarCatalogosTP3.sql).
-*/
+TP3 - sp_CargarCatalogos
+Carga los catalogos del XML de la tarea 3 (CatalogosTarea3.xml).
+Reemplaza al sp_CargarCatalogos de TP2, que ya no sirve porque
+TipoCuentaAhorro cambio de columnas y ahora hay TipoMovimiento.
 
-DECLARE @inXml XML;
-SET @inXml = N'
-<!-- Catálogos - Tercera Tarea Programada - Bases de Datos I.
-     Las llaves se insertan tal cual vienen (no son identity). -->
-<Catalogos>
-  <Tipo_Doc>
-    <TipoDocuIdentidad Id="1" Nombre="Cedula Nacional"/>
-    <TipoDocuIdentidad Id="2" Nombre="Cedula Residente"/>
-    <TipoDocuIdentidad Id="3" Nombre="Pasaporte"/>
-    <TipoDocuIdentidad Id="4" Nombre="Cedula Juridica"/>
-    <TipoDocuIdentidad Id="5" Nombre="Permiso de Trabajo"/>
-    <TipoDocuIdentidad Id="6" Nombre="Cedula Extranjera"/>
-  </Tipo_Doc>
-  <Tipo_Moneda>
-    <TipoMoneda Id="1" Nombre="Colones" Simbolo="₡"/>
-    <TipoMoneda Id="2" Nombre="Dolares" Simbolo="$"/>
-    <TipoMoneda Id="3" Nombre="Euros" Simbolo="€"/>
-  </Tipo_Moneda>
-  <Parentezcos>
-    <Parentezco Id="1" Nombre="Padre"/>
-    <Parentezco Id="2" Nombre="Madre"/>
-    <Parentezco Id="3" Nombre="Hijo"/>
-    <Parentezco Id="4" Nombre="Hija"/>
-    <Parentezco Id="5" Nombre="Hermano"/>
-    <Parentezco Id="6" Nombre="Hermana"/>
-    <Parentezco Id="7" Nombre="amigo"/>
-    <Parentezco Id="8" Nombre="amiga"/>
-  </Parentezcos>
-  <!-- Montos en la moneda del tipo de cuenta. TasaInteresAnual en porcentaje; se aplica /12 al cierre.
-       NumRetiros*: máximo de operaciones por periodo sin comisión. MontoMaxSinpeDiario: suma de
-       envíos Sinpe en un día sin comisión; ComisionSinpe se cobra por cada envío que lo supere. -->
-  <Tipo_Cuenta_Ahorros>
-    <TipoCuentaAhorro Id="1" Nombre="Proletario" IdTipoMoneda="1" SaldoMinimo="25000.00" MultaSaldoMin="3000.00" CargoMensual="5000.00" NumRetirosHumano="5" NumRetirosAutomatico="8" ComisionHumano="300.00" ComisionAutomatico="300.00" MontoMaxSinpeDiario="100000.00" ComisionSinpe="500.00" TasaInteresAnual="10"/>
-    <TipoCuentaAhorro Id="2" Nombre="Profesional" IdTipoMoneda="1" SaldoMinimo="50000.00" MultaSaldoMin="3000.00" CargoMensual="15000.00" NumRetirosHumano="5" NumRetirosAutomatico="8" ComisionHumano="500.00" ComisionAutomatico="500.00" MontoMaxSinpeDiario="200000.00" ComisionSinpe="750.00" TasaInteresAnual="15"/>
-    <TipoCuentaAhorro Id="3" Nombre="Exclusivo" IdTipoMoneda="1" SaldoMinimo="100000.00" MultaSaldoMin="3000.00" CargoMensual="30000.00" NumRetirosHumano="5" NumRetirosAutomatico="8" ComisionHumano="1000.00" ComisionAutomatico="1000.00" MontoMaxSinpeDiario="500000.00" ComisionSinpe="1000.00" TasaInteresAnual="20"/>
-    <TipoCuentaAhorro Id="4" Nombre="Ahorro Dolares" IdTipoMoneda="2" SaldoMinimo="100.00" MultaSaldoMin="5.00" CargoMensual="10.00" NumRetirosHumano="5" NumRetirosAutomatico="8" ComisionHumano="1.00" ComisionAutomatico="1.00" MontoMaxSinpeDiario="400.00" ComisionSinpe="1.00" TasaInteresAnual="3"/>
-  </Tipo_Cuenta_Ahorros>
-  <!-- Accion: Credito suma al saldo, Debito resta. flagGeneraComprobante=1 envía comprobante al email del dueño. -->
-  <Tipos_Movimiento>
-    <TipoMovimiento Id="1" Nombre="Deposito Ventana" Accion="Credito" flagGeneraComprobante="1"/>
-    <TipoMovimiento Id="2" Nombre="Deposito ATM" Accion="Credito" flagGeneraComprobante="1"/>
-    <TipoMovimiento Id="3" Nombre="Compra" Accion="Debito" flagGeneraComprobante="1"/>
-    <TipoMovimiento Id="4" Nombre="Retiro ATM" Accion="Debito" flagGeneraComprobante="1"/>
-    <TipoMovimiento Id="5" Nombre="Retiro Ventana" Accion="Debito" flagGeneraComprobante="1"/>
-    <TipoMovimiento Id="6" Nombre="Comision Exceso Ventana" Accion="Debito" flagGeneraComprobante="0"/>
-    <TipoMovimiento Id="7" Nombre="Comision Exceso ATM" Accion="Debito" flagGeneraComprobante="0"/>
-    <TipoMovimiento Id="8" Nombre="Deposito Sinpe" Accion="Credito" flagGeneraComprobante="1"/>
-    <TipoMovimiento Id="9" Nombre="Retiro Sinpe" Accion="Debito" flagGeneraComprobante="1"/>
-    <TipoMovimiento Id="10" Nombre="Comision Sinpe" Accion="Debito" flagGeneraComprobante="0"/>
-    <TipoMovimiento Id="11" Nombre="Cargo Servicio Mensual" Accion="Debito" flagGeneraComprobante="0"/>
-    <TipoMovimiento Id="12" Nombre="Intereses Mensuales" Accion="Credito" flagGeneraComprobante="0"/>
-    <TipoMovimiento Id="13" Nombre="Aplicacion Subcuenta Objetivo" Accion="Debito" flagGeneraComprobante="0"/>
-    <TipoMovimiento Id="14" Nombre="Redencion Subcuenta Objetivo" Accion="Credito" flagGeneraComprobante="0"/>
-    <TipoMovimiento Id="15" Nombre="Redencion Intereses Subcuenta Objetivo" Accion="Credito" flagGeneraComprobante="0"/>
-    <TipoMovimiento Id="16" Nombre="Multa Saldo Minimo" Accion="Debito" flagGeneraComprobante="0"/>
-    <TipoMovimiento Id="17" Nombre="Debito por Ajuste" Accion="Debito" flagGeneraComprobante="0"/>
-    <TipoMovimiento Id="18" Nombre="Credito por Ajuste" Accion="Credito" flagGeneraComprobante="0"/>
-  </Tipos_Movimiento>
-  <TipoOperacionesBitacora>
-    <TipoOperacion Id="1" Nombre="Login"/>
-    <TipoOperacion Id="2" Nombre="Logout"/>
-    <TipoOperacion Id="3" Nombre="Agregar beneficiario"/>
-    <TipoOperacion Id="4" Nombre="Actualizar beneficiario"/>
-    <TipoOperacion Id="5" Nombre="Eliminar beneficiario"/>
-    <TipoOperacion Id="6" Nombre="Actualizar porcentaje de beneficiario"/>
-    <TipoOperacion Id="7" Nombre="Consultar estado de cuenta"/>
-    <TipoOperacion Id="8" Nombre="Consultar movimientos de estado de cuenta"/>
-  </TipoOperacionesBitacora>
-</Catalogos>';
+Orden de instalacion: CreaBasesTablas (TP2) -> 01_ModeloFisicoFinanciero
+-> ErrorBD (bdpermisos.sql, parte 1) -> este script.
 
+Entrada : @inXml  XML con el nodo raiz <Catalogos>
+Salida  : @outResultCode
+            0     = exito
+            50007 = XML nulo o con secciones faltantes
+            50300 = los catalogos ya estaban cargados
+            50000 = error inesperado (queda en dbo.ErrorBD)
+
+Ejemplo de ejecucion:
 DECLARE @outResultCode INT;
-
 EXEC dbo.sp_CargarCatalogos
     @inXml = @inXml,
     @outResultCode = @outResultCode OUTPUT;
-
--- 0 = correcto; 50007 = XML invalido; 50300 = ya cargados; 50000 = error (ver dbo.ErrorBD).
 SELECT @outResultCode AS CodigoResultado;
-GO
+*/
 
--- Verificacion: cantidades esperadas 6, 3, 8, 4, 18, 8.
-SELECT 'TipoDocuIdentidad' AS Tabla, COUNT(*) AS Cantidad FROM dbo.TipoDocuIdentidad
-UNION ALL SELECT 'TipoMoneda', COUNT(*) FROM dbo.TipoMoneda
-UNION ALL SELECT 'Parentezco', COUNT(*) FROM dbo.Parentezco
-UNION ALL SELECT 'TipoCuentaAhorro', COUNT(*) FROM dbo.TipoCuentaAhorro
-UNION ALL SELECT 'TipoMovimiento', COUNT(*) FROM dbo.TipoMovimiento
-UNION ALL SELECT 'TipoOperacionBitacora', COUNT(*) FROM dbo.TipoOperacionBitacora;
+CREATE OR ALTER PROCEDURE dbo.sp_CargarCatalogos
+    @inXml XML
+    , @outResultCode INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET @outResultCode = 0;
 
--- Los 4 tipos de cuenta con sus columnas nuevas (el 4 es en dolares).
-SELECT Id, Nombre, IdTipoMoneda, CargoMensual, TasaInteresAnual,
-       MontoMaxSinpeDiario, ComisionSinpe
-FROM dbo.TipoCuentaAhorro
-ORDER BY Id;
+    -- Validaciones: que llegue el XML con las seis secciones.
+    IF @inXml IS NULL
+    BEGIN
+        SET @outResultCode = 50007;
+        RETURN;
+    END;
 
--- Los 18 tipos de movimiento.
-SELECT Id, Nombre, Accion, flagGeneraComprobante
-FROM dbo.TipoMovimiento
-ORDER BY Id;
+    IF NOT EXISTS (SELECT 1
+                   FROM @inXml.nodes('/Catalogos/Tipo_Doc/TipoDocuIdentidad') AS T(Nodo))
+       OR NOT EXISTS (SELECT 1
+                      FROM @inXml.nodes('/Catalogos/Tipo_Moneda/TipoMoneda') AS T(Nodo))
+       OR NOT EXISTS (SELECT 1
+                      FROM @inXml.nodes('/Catalogos/Parentezcos/Parentezco') AS T(Nodo))
+       OR NOT EXISTS (SELECT 1
+                      FROM @inXml.nodes('/Catalogos/Tipo_Cuenta_Ahorros/TipoCuentaAhorro') AS T(Nodo))
+       OR NOT EXISTS (SELECT 1
+                      FROM @inXml.nodes('/Catalogos/Tipos_Movimiento/TipoMovimiento') AS T(Nodo))
+       OR NOT EXISTS (SELECT 1
+                      FROM @inXml.nodes('/Catalogos/TipoOperacionesBitacora/TipoOperacion') AS T(Nodo))
+    BEGIN
+        SET @outResultCode = 50007;
+        RETURN;
+    END;
+
+    -- Los catalogos se cargan una sola vez.
+    IF EXISTS (SELECT 1 FROM dbo.TipoDocuIdentidad)
+       OR EXISTS (SELECT 1 FROM dbo.TipoMoneda)
+       OR EXISTS (SELECT 1 FROM dbo.Parentezco)
+       OR EXISTS (SELECT 1 FROM dbo.TipoCuentaAhorro)
+       OR EXISTS (SELECT 1 FROM dbo.TipoMovimiento)
+       OR EXISTS (SELECT 1 FROM dbo.TipoOperacionBitacora)
+    BEGIN
+        SET @outResultCode = 50300;
+        RETURN;
+    END;
+
+    -- Hay varias inserciones: van juntas en una transaccion, al final del SP.
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        INSERT INTO dbo.TipoDocuIdentidad (Id, Nombre)
+        SELECT
+            T.Nodo.value('@Id', 'INT')
+            , T.Nodo.value('@Nombre', 'VARCHAR(64)')
+        FROM @inXml.nodes('/Catalogos/Tipo_Doc/TipoDocuIdentidad') AS T(Nodo);
+
+        INSERT INTO dbo.TipoMoneda (Id, Nombre, Simbolo)
+        SELECT
+            T.Nodo.value('@Id', 'INT')
+            , T.Nodo.value('@Nombre', 'VARCHAR(32)')
+            , T.Nodo.value('@Simbolo', 'NVARCHAR(4)')
+        FROM @inXml.nodes('/Catalogos/Tipo_Moneda/TipoMoneda') AS T(Nodo);
+
+        INSERT INTO dbo.Parentezco (Id, Nombre)
+        SELECT
+            T.Nodo.value('@Id', 'INT')
+            , T.Nodo.value('@Nombre', 'VARCHAR(32)')
+        FROM @inXml.nodes('/Catalogos/Parentezcos/Parentezco') AS T(Nodo);
+
+        INSERT INTO dbo.TipoCuentaAhorro (
+            Id
+            , Nombre
+            , IdTipoMoneda
+            , SaldoMinimo
+            , MultaSaldoMin
+            , CargoMensual
+            , NumRetirosHumano
+            , NumRetirosAutomatico
+            , ComisionHumano
+            , ComisionAutomatico
+            , TasaInteresAnual
+            , MontoMaxSinpeDiario
+            , ComisionSinpe
+        )
+        SELECT
+            T.Nodo.value('@Id', 'INT')
+            , T.Nodo.value('@Nombre', 'VARCHAR(64)')
+            , T.Nodo.value('@IdTipoMoneda', 'INT')
+            , T.Nodo.value('@SaldoMinimo', 'DECIMAL(18,2)')
+            , T.Nodo.value('@MultaSaldoMin', 'DECIMAL(18,2)')
+            , T.Nodo.value('@CargoMensual', 'DECIMAL(18,2)')
+            , T.Nodo.value('@NumRetirosHumano', 'INT')
+            , T.Nodo.value('@NumRetirosAutomatico', 'INT')
+            , T.Nodo.value('@ComisionHumano', 'DECIMAL(18,2)')
+            , T.Nodo.value('@ComisionAutomatico', 'DECIMAL(18,2)')
+            , T.Nodo.value('@TasaInteresAnual', 'DECIMAL(5,2)')
+            , T.Nodo.value('@MontoMaxSinpeDiario', 'DECIMAL(18,2)')
+            , T.Nodo.value('@ComisionSinpe', 'DECIMAL(18,2)')
+        FROM @inXml.nodes('/Catalogos/Tipo_Cuenta_Ahorros/TipoCuentaAhorro') AS T(Nodo);
+
+        INSERT INTO dbo.TipoMovimiento (Id, Nombre, Accion, flagGeneraComprobante)
+        SELECT
+            T.Nodo.value('@Id', 'INT')
+            , T.Nodo.value('@Nombre', 'VARCHAR(64)')
+            , T.Nodo.value('@Accion', 'VARCHAR(7)')
+            , T.Nodo.value('@flagGeneraComprobante', 'BIT')
+        FROM @inXml.nodes('/Catalogos/Tipos_Movimiento/TipoMovimiento') AS T(Nodo);
+
+        INSERT INTO dbo.TipoOperacionBitacora (Id, Nombre)
+        SELECT
+            T.Nodo.value('@Id', 'INT')
+            , T.Nodo.value('@Nombre', 'VARCHAR(64)')
+        FROM @inXml.nodes('/Catalogos/TipoOperacionesBitacora/TipoOperacion') AS T(Nodo);
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+        BEGIN
+            ROLLBACK TRANSACTION;
+        END;
+
+        -- El error se guarda aqui mismo (sin llamar a otro SP), ya fuera de la transaccion.
+        INSERT INTO dbo.ErrorBD (
+            NumeroError
+            , Severidad
+            , Estado
+            , Procedimiento
+            , Linea
+            , Mensaje
+        )
+        VALUES (
+            ERROR_NUMBER()
+            , ERROR_SEVERITY()
+            , ERROR_STATE()
+            , ERROR_PROCEDURE()
+            , ERROR_LINE()
+            , ERROR_MESSAGE()
+        );
+
+        SET @outResultCode = 50000;
+    END CATCH;
+END;
 GO
