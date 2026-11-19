@@ -805,7 +805,7 @@ SELECT TM.Nombre AS TipoMovimiento, COUNT(*) AS Cantidad
 FROM dbo.Movimiento AS M
 INNER JOIN dbo.TipoMovimiento AS TM
     ON TM.Id = M.IdTipoMovimiento
-GROUP BY TM.Nombre
+GROUP BY TM.Nombre 
 ORDER BY TM.Nombre;
 
 SELECT TOP (20) Id, NumeroError, Mensaje FROM dbo.ErrorBD ORDER BY Id DESC;
