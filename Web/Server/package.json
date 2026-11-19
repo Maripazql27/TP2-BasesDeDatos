@@ -1,9 +1,9 @@
 {
-  "name": "tp2-servidor",
+  "name": "tp3-servidor",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Servidor (capa lógica) del TP2 de Base de Datos 1: recibe peticiones de la web y ejecuta procedimientos almacenados en SQL Server.",
+  "description": "Servidor (capa lógica) del TP3 de Base de Datos 1: recibe peticiones de la web y ejecuta procedimientos almacenados en SQL Server.",
   "scripts": {
     "start": "node index.js"
   },
@@ -15,4 +15,3 @@
     "nodemailer": "^10.6.0"
   }
 }
-

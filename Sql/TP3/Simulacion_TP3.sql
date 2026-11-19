@@ -564,16 +564,20 @@ BEGIN TRY
                 ELSE
                 BEGIN
                     SET @numeroCuenta = @xmlOperaciones.value(
-                        '(/Operaciones/FechaOperacion[@Fecha=sql:variable("@fechaTexto")]/Movimientos[sql:variable("@i")]/@CodigoCuenta)[1]',
+                        '(/Operaciones/FechaOperacion[@Fecha=sql:variable("@fechaTexto")]
+                        /Movimientos[sql:variable("@i")]/@CodigoCuenta)[1]',
                         'VARCHAR(16)');
                     SET @tipoMov = @xmlOperaciones.value(
-                        '(/Operaciones/FechaOperacion[@Fecha=sql:variable("@fechaTexto")]/Movimientos[sql:variable("@i")]/@Tipo)[1]',
+                        '(/Operaciones/FechaOperacion[@Fecha=sql:variable("@fechaTexto")]
+                        /Movimientos[sql:variable("@i")]/@Tipo)[1]',
                         'VARCHAR(64)');
                     SET @monto = @xmlOperaciones.value(
-                        '(/Operaciones/FechaOperacion[@Fecha=sql:variable("@fechaTexto")]/Movimientos[sql:variable("@i")]/@Monto)[1]',
+                        '(/Operaciones/FechaOperacion[@Fecha=sql:variable("@fechaTexto")]
+                        /Movimientos[sql:variable("@i")]/@Monto)[1]',
                         'DECIMAL(18,2)');
                     SET @descripcion = @xmlOperaciones.value(
-                        '(/Operaciones/FechaOperacion[@Fecha=sql:variable("@fechaTexto")]/Movimientos[sql:variable("@i")]/@Descripcion)[1]',
+                        '(/Operaciones/FechaOperacion[@Fecha=sql:variable("@fechaTexto")]
+                        /Movimientos[sql:variable("@i")]/@Descripcion)[1]',
                         'NVARCHAR(256)');
 
                     EXEC dbo.sp_AplicarMovimiento

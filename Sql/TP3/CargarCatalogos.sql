@@ -2,8 +2,7 @@ USE CuentaAhorrosTP2;
 GO
 
 /*
-TP3 - Ejecutar la carga de catalogos (CatalogosTarea3.xml).
-Requiere haber creado antes sp_CargarCatalogos (Sp_CargarCatalogosTP3.sql).
+Requiere haber creado antes sp_CargarCatalogos (Sp_CargarCatalogos.sql).
 */
 
 DECLARE @inXml XML;
@@ -82,8 +81,16 @@ EXEC dbo.sp_CargarCatalogos
     @inXml = @inXml,
     @outResultCode = @outResultCode OUTPUT;
 
+--primera carga (esperado 0; 50300 si los catalogos ya estaban cargados).
 -- 0 = correcto; 50007 = XML invalido; 50300 = ya cargados; 50000 = error (ver dbo.ErrorBD).
-SELECT @outResultCode AS CodigoResultado;
+SELECT @outResultCode AS Codigo_Prueba1_PrimeraCarga;
+
+-- segunda carga con el mismo XML completo. No debe duplicar nada
+-- (esperado: 50300). Va en esta misma tanda porque @inXml solo vive aqui.
+EXEC dbo.sp_CargarCatalogos
+    @inXml = @inXml,
+    @outResultCode = @outResultCode OUTPUT;
+SELECT @outResultCode AS Codigo_Prueba2_SegundaCarga;
 GO
 
 -- Verificacion: cantidades esperadas 6, 3, 8, 4, 18, 8.
@@ -108,13 +115,14 @@ GO
 
 
 
----Pruebas del SP cargar catalogos
--- Prueba 2: no debe cargar dos veces (esperado: 50300)
-DECLARE @x XML = N'<Catalogos><Tipo_Doc/></Catalogos>';
+-- Pruebas de XML invalido 
+--  XML nulo (esperado: 50007)
 DECLARE @r INT;
-EXEC dbo.sp_CargarCatalogos @inXml = @x, @outResultCode = @r OUTPUT;
-SELECT @r AS Codigo_Prueba2;
-
--- Prueba 3: XML nulo (esperado: 50007)
 EXEC dbo.sp_CargarCatalogos @inXml = NULL, @outResultCode = @r OUTPUT;
-SELECT @r AS Codigo_Prueba3;
+SELECT @r AS Codigo_Prueba3_XmlNulo;
+
+-- XML con secciones faltantes (esperado: 50007)
+DECLARE @xIncompleto XML = N'<Catalogos><Tipo_Doc/></Catalogos>';
+EXEC dbo.sp_CargarCatalogos @inXml = @xIncompleto, @outResultCode = @r OUTPUT;
+SELECT @r AS Codigo_Prueba4_XmlIncompleto;
+GO

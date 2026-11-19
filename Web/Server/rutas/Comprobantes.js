@@ -89,7 +89,14 @@ export function crearRutasComprobantes(ejecutarSP, enviadorCorreo) {
           await enviadorCorreo.enviar(comprobante);
         } catch (error) {
           flagEnviado = false;
-          mensajeError = String(error?.message ?? error).slice(0, 400);
+          // Un fallo de conexion puede llegar como AggregateError con el mensaje vacio:
+          // en ese caso se usan los mensajes internos o, si no hay, el codigo (ECONNREFUSED, etc.).
+          mensajeError = String(
+            error?.message
+              || error?.errors?.map((e) => e?.message).join('; ')
+              || error?.code
+              || error,
+          ).slice(0, 400);
           console.error(`Comprobante ${comprobante.IdComprobante}: no se pudo enviar:`, mensajeError);
         }
 
