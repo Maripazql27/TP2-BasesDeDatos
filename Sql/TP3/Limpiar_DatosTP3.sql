@@ -140,3 +140,10 @@ SELECT (SELECT COUNT(*) FROM dbo.Persona)           AS Personas_esperado_1,
        (SELECT COUNT(*) FROM dbo.CorridaSimulacion) AS Corridas,
        (SELECT COUNT(*) FROM dbo.TipoMovimiento)    AS TiposMov_esperado_18;
 GO
+
+
+--Para probar los correos en ethereal solo pone 3 comprobantes con envio pendiente
+
+UPDATE dbo.Comprobante
+SET FlagEnviado = 0, FechaHoraEnvio = NULL
+WHERE Id IN (1, 2, 3);
