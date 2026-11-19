@@ -4,12 +4,6 @@ GO
 /*
 sp_CargarCatalogos
 Carga los catalogos del XML de la tarea 3 (CatalogosTarea3.xml).
-Reemplaza al sp_CargarCatalogos de TP2, que ya no sirve porque
-TipoCuentaAhorro cambio de columnas y ahora hay TipoMovimiento.
-
-Orden de instalacion: CreaBasesTablas (TP2) -> 01_ModeloFisicoFinanciero
--> ErrorBD (bdpermisos.sql, parte 1) -> este script.
-
 Entrada : @inXml  XML con el nodo raiz <Catalogos>
 Salida  : @outResultCode
             0     = exito
