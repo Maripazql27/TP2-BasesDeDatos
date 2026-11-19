@@ -168,3 +168,30 @@ select {
   color: #b45309;
   font-weight: bold;
 }
+
+/* Comprobantes por correo (página de control, solo administrador) */
+.estado-error {
+  color: #b00020;
+  font-weight: bold;
+}
+/* Tabla larga con su propio desplazamiento; el encabezado queda fijo */
+.tabla-alta {
+  max-height: 440px;
+  overflow-y: auto;
+}
+.tabla-alta th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+/* Texto del correo dentro de la tabla (al hacer clic en "Ver") */
+.texto-correo {
+  white-space: pre-wrap;
+  font-family: inherit;
+  margin: 8px 0 0;
+  min-width: 380px;
+}
+.nota {
+  color: #555;
+  font-size: 0.9em;
+}

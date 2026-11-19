@@ -365,3 +365,6 @@ FodyWeavers.xsd
 # Web (React / Node)
 dist/
 .env
+
+# Correos de los comprobantes guardados en modo archivo (Web/Server/Correo.js)
+Web/Server/correos_enviados/

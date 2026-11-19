@@ -2,6 +2,10 @@
 --Comprobar que exista, rechaza operaciones duplicadas
 --y debitos con fondos insuficientes, actualiza saldos
 --genera sinpe como segundo movimiento y confirma cambios, sino nada
+--Si el tipo de movimiento genera comprobante (flagGeneraComprobante),
+--inserta primero el comprobante con el texto del correo para el dueno de
+--la cuenta (dbo.Comprobante; el FK queda en Movimiento). El correo lo envia
+--despues el servidor web, fuera de esta transaccion.
 
 USE CuentaAhorrosTP2;
 GO
@@ -32,6 +36,18 @@ BEGIN
     DECLARE @MontoComision DECIMAL(18,2) = 0;
     DECLARE @TotalSinpeAnterior DECIMAL(18,2) = 0;
     DECLARE @IdTipoComision INT;
+
+    -- Comprobante
+    DECLARE @true BIT = 1;
+    DECLARE @FlagGeneraComprobante BIT;
+    DECLARE @NombreTipoMovimiento VARCHAR(64);
+    DECLARE @IdComprobante INT = NULL;
+    DECLARE @EmailDueno VARCHAR(128);
+    DECLARE @NombreDueno VARCHAR(64);
+    DECLARE @SimboloMoneda NVARCHAR(4);
+    DECLARE @AsuntoComprobante NVARCHAR(128);
+    DECLARE @TextoComprobante NVARCHAR(2000);
+    DECLARE @SaltoLinea NVARCHAR(2) = CHAR(13) + CHAR(10);
     SET @outResultCode = 0;
     SET @outIdMovimiento = NULL;
 
@@ -55,7 +71,9 @@ BEGIN
     -- Solo movimientos operativos del XML
     SELECT
         @IdTipoMovimiento = Id,
-        @Accion = Accion
+        @Accion = Accion,
+        @FlagGeneraComprobante = flagGeneraComprobante,
+        @NombreTipoMovimiento = Nombre
     FROM dbo.TipoMovimiento
     WHERE Nombre = @inTipoMovimiento
       AND Id IN (1, 2, 3, 4, 5, 8, 9);
@@ -67,6 +85,47 @@ BEGIN
     END;
 
     BEGIN TRY
+        -- Comprobante, parte 1. Antes de la transaccion, para que esta sea
+        -- lo mas corta posible: los datos que no cambian durante la
+        -- operacion (dueno, correo y moneda) y el texto que no depende del
+        -- saldo.
+        IF @FlagGeneraComprobante = @true
+        BEGIN
+            SELECT
+                @EmailDueno = P.Email,
+                @NombreDueno = P.Nombre,
+                @SimboloMoneda = TM.Simbolo
+            FROM dbo.Cuenta AS C
+            INNER JOIN dbo.Persona AS P
+                ON P.Id = C.IdPersona
+            INNER JOIN dbo.TipoCuentaAhorro AS T
+                ON T.Id = C.IdTipoCuentaAhorro
+            INNER JOIN dbo.TipoMoneda AS TM
+                ON TM.Id = T.IdTipoMoneda
+            WHERE C.NumeroCuenta = @inNumeroCuenta;
+
+            SET @AsuntoComprobante =
+                @NombreTipoMovimiento + N' en la cuenta ' + @inNumeroCuenta;
+
+            SET @TextoComprobante =
+                N'Hola, ' + @NombreDueno + N':' + @SaltoLinea + @SaltoLinea
+                + N'Este es el comprobante de un movimiento en su cuenta de '
+                + N'ahorros ' + @inNumeroCuenta + N'.' + @SaltoLinea
+                + @SaltoLinea
+                + N'Tipo de movimiento: ' + @NombreTipoMovimiento + @SaltoLinea
+                + N'Fecha: ' + CONVERT(NVARCHAR(10), @inFechaMovimiento, 23)
+                + @SaltoLinea
+                + N'Detalle: ' + @inDescripcion + @SaltoLinea
+                + N'Monto: '
+                + dbo.fnTextoMonto(
+                      CASE
+                          WHEN @Accion = 'Debito' THEN -@inMonto
+                          ELSE @inMonto
+                      END,
+                      @SimboloMoneda)
+                + @SaltoLinea;
+        END;
+
         BEGIN TRANSACTION;
         -- Bloquea la cuenta en la operacion
         SELECT
@@ -199,7 +258,50 @@ BEGIN
 
 
 
-        -- Registra el movimiento principal
+        -- Comprobante, parte 2. Se completa el texto con el saldo que se
+        -- acaba de calcular y se inserta ANTES del movimiento, porque es el
+        -- objeto menos importante (comprobante, movimiento y al final el
+        -- saldo). La comision SINPE va dentro de este mismo comprobante.
+        IF @FlagGeneraComprobante = @true
+        BEGIN
+            SET @TextoComprobante = @TextoComprobante
+                + N'Nuevo saldo: '
+                + dbo.fnTextoMonto(@SaldoPrincipal, @SimboloMoneda)
+                + @SaltoLinea
+                + CASE
+                      WHEN @MontoComision > 0
+                          THEN N'Cargo por exceder el monto diario SINPE: '
+                               + dbo.fnTextoMonto(-@MontoComision,
+                                                  @SimboloMoneda)
+                               + @SaltoLinea
+                               + N'Saldo final: '
+                               + dbo.fnTextoMonto(@SaldoFinal, @SimboloMoneda)
+                               + @SaltoLinea
+                      ELSE N''
+                  END
+                + @SaltoLinea
+                + N'Correo enviado por el sistema del banco. '
+                + N'No responda a este mensaje.';
+
+            INSERT INTO dbo.Comprobante (
+                IdCuenta,
+                FechaOperacion,
+                EmailDestino,
+                Asunto,
+                TextoEmail
+            )
+            VALUES (
+                @IdCuenta,
+                @inFechaMovimiento,
+                @EmailDueno,
+                @AsuntoComprobante,
+                @TextoComprobante
+            );
+
+            SET @IdComprobante = SCOPE_IDENTITY();
+        END;
+
+        -- Registra el movimiento principal (con su comprobante, si tiene)
         INSERT INTO dbo.Movimiento (
             IdEstadoCuenta,
             IdTipoMovimiento,
@@ -208,7 +310,8 @@ BEGIN
             Descripcion,
             SaldoPosterior,
             ReferenciaOrigen,
-            SecuenciaOrigen
+            SecuenciaOrigen,
+            IdComprobante
         )
         VALUES (
             @IdEstadoCuenta,
@@ -218,14 +321,16 @@ BEGIN
             @inDescripcion,
             @SaldoPrincipal,
             @inReferenciaOrigen,
-            1
+            1,
+            @IdComprobante
         );
 
         SET @outIdMovimiento = SCOPE_IDENTITY();
 
 
 
-        -- Registra la comision como segundo movimiento
+        -- Registra la comision como segundo movimiento. No lleva
+        -- comprobante propio (IdComprobante queda NULL): va en el del retiro.
         IF @MontoComision > 0
         BEGIN
             INSERT INTO dbo.Movimiento (

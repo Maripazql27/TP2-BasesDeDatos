@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { consultarControlSimulacion } from '../api';
+import SeccionComprobantes from '../components/Comprobantes';
 
 // Valores de CodigoResultado en dbo.CorridaSimulacion
 const RESULTADOS = {
@@ -159,6 +160,8 @@ export default function Simulacion() {
               </tbody>
             </table>
           </div>
+
+          <SeccionComprobantes version={version} />
 
           <h2>Fechas de operación</h2>
           <div className="tabla-scroll">

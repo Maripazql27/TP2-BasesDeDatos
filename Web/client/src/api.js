@@ -10,6 +10,9 @@
 //                                                 -> sp_ConsultarMovimientosEstadoCuenta
 //     consultarControlSimulacion -> GET /api/simulacion/control
 //                                                 -> sp_ConsultarControlSimulacion
+//     consultarComprobantes  -> GET  /api/comprobantes -> sp_ConsultarComprobantes
+//     enviarComprobantes     -> POST /api/comprobantes/enviar
+//                                -> sp_ConsultarComprobantes + sp_RegistrarEnvioComprobante
 
 // Hace UNA petición al servidor y siempre devuelve un objeto { ok, ... }.
 //   Usa direcciones relativas ('/api/...'): en desarrollo, Vite las reenvía
@@ -74,6 +77,17 @@ export function consultarMovimientos(numeroCuenta, idEstadoCuenta) {
 // Control de la simulación (solo lectura): { ok, resumen, corridas, fechas }.
 export function consultarControlSimulacion() {
   return pedir('GET', '/api/simulacion/control');
+}
+
+// Comprobantes por correo (solo administrador): { ok, resumen, comprobantes, envio }.
+export function consultarComprobantes() {
+  return pedir('GET', '/api/comprobantes');
+}
+
+// Envía por correo los comprobantes pendientes (solo administrador).
+// Devuelve { ok, total, enviados, fallidos, sinRegistrar }.
+export function enviarComprobantes() {
+  return pedir('POST', '/api/comprobantes/enviar');
 }
 
 // ---------------------------------------------------------------- BENEFICIARIOS

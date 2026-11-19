@@ -2,14 +2,15 @@
    Limpieza de datos de la simulacion.
    Borra TODOS los datos de cuentas y movimientos, y el control de la
    simulacion (corridas y fechas), para poder volver a correr
-   Simulacion_TP3.sql desde la primera fecha. NO toca los catalogos
+   Simulacion_TP3.sql desde la primera fecha. Tambien borra los
+   comprobantes (dbo.Comprobante). NO toca los catalogos
    (TipoMoneda, TipoCuentaAhorro, TipoMovimiento, etc.), ni los SP, ni el
    trigger. Tambien deja vacia dbo.ErrorBD y reinicia los Id para que
    empiecen en 1.
    El orden de los DELETE respeta las llaves foraneas (primero las hijas).
 
    Al final vuelve a crear el usuario administrador fquiros (el mismo bloque
-   de Crear_Admin_TP3.sql), porque la limpieza borra todos los usuarios y
+   de Crear_Admin.sql), porque la limpieza borra todos los usuarios y
    personas. Asi, despues de limpiar, la base queda lista para la simulacion.
 */
 USE CuentaAhorrosTP2;
@@ -39,6 +40,18 @@ DELETE FROM dbo.Bitacora;
 DELETE FROM dbo.UsuarioPuedeVer;
 DELETE FROM dbo.Usuario;
 DELETE FROM dbo.Movimiento;
+
+-- Comprobantes: despues de Movimiento (que tiene el FK al comprobante) y
+-- antes de Cuenta. Solo se reinicia el Id si la tabla tenia filas.
+IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL
+BEGIN
+    IF EXISTS (SELECT 1 FROM dbo.Comprobante)
+    BEGIN
+        DELETE FROM dbo.Comprobante;
+        DBCC CHECKIDENT ('dbo.Comprobante', RESEED, 0);
+    END;
+END;
+
 DELETE FROM dbo.EstadoCuenta;
 DELETE FROM dbo.Beneficiario;
 DELETE FROM dbo.Cuenta;
@@ -60,7 +73,7 @@ GO
 
 -- Administrador (fquiros / admin1234). Se vuelve a crear porque arriba se
 -- borraron todos los usuarios y personas. Es el mismo bloque de
--- Crear_Admin_TP3.sql: los Id reiniciados hacen que quede con Id 1.
+-- Crear_Admin.sql: los Id reiniciados hacen que quede con Id 1.
 DECLARE @nombreUsuario VARCHAR(64)  = 'fquiros';
 DECLARE @clave         VARCHAR(128) = 'admin1234';
 DECLARE @idTipoDocu    INT          = 1;                       -- Cedula Nacional
@@ -121,6 +134,7 @@ SELECT (SELECT COUNT(*) FROM dbo.Persona)           AS Personas_esperado_1,
        (SELECT COUNT(*) FROM dbo.Cuenta)            AS Cuentas,
        (SELECT COUNT(*) FROM dbo.EstadoCuenta)      AS Estados,
        (SELECT COUNT(*) FROM dbo.Movimiento)        AS Movimientos,
+       (SELECT COUNT(*) FROM dbo.Comprobante)       AS Comprobantes,
        (SELECT COUNT(*) FROM dbo.ErrorBD)           AS Errores,
        (SELECT COUNT(*) FROM dbo.ControlSimulacion) AS FechasControl,
        (SELECT COUNT(*) FROM dbo.CorridaSimulacion) AS Corridas,

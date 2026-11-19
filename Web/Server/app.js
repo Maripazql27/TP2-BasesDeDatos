@@ -1,16 +1,19 @@
-
-
-
 // ARMA EL SERVIDOR EXPRESS (sesión + rutas + manejo de errores)
-
 import express from 'express';
 import session from 'express-session';
 import { crearRutasSesion } from './rutas/Sesion.js';
 import { crearRutasCuentas } from './rutas/Cuentas.js';
 import { crearRutasBeneficiarios } from './rutas/beneficiarios.js';
 import { crearRutasSimulacion } from './rutas/Simulacion.js';
+import { crearRutasComprobantes } from './rutas/Comprobantes.js';
+import { crearEnviadorCorreo } from './Correo.js';
 
-export function crearApp(ejecutarSP, { secreto, produccion = false } = {}) {
+// enviadorCorreo: cómo se envían los comprobantes (ver Correo.js). Si no se
+// pasa, se usa el del archivo .env (por defecto, archivos .eml).
+export function crearApp(
+  ejecutarSP,
+  { secreto, produccion = false, enviadorCorreo = crearEnviadorCorreo() } = {}
+) {
   const app = express();
 
   // Convierte el cuerpo JSON de las peticiones en un objeto (req.body).
@@ -46,6 +49,7 @@ export function crearApp(ejecutarSP, { secreto, produccion = false } = {}) {
   app.use('/api', crearRutasSesion(ejecutarSP));
   app.use('/api/cuentas', crearRutasCuentas(ejecutarSP));
   app.use('/api/simulacion', crearRutasSimulacion(ejecutarSP));
+  app.use('/api/comprobantes', crearRutasComprobantes(ejecutarSP, enviadorCorreo));
   app.use('/api', crearRutasBeneficiarios(ejecutarSP));
 
   // Cualquier otra dirección de /api que no exista responde 501 en vez de inventar datos.

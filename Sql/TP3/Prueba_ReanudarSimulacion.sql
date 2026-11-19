@@ -7,7 +7,7 @@
    corrida se ejecuta aqui la CONSULTA A. Al final, la CONSULTA B compara
    el resultado con el de la corrida completa sin cortes.
 
-   PASO 0. Correr Limpiar_Datos_TP3.sql (deja todo en 0, tambien el control).
+   PASO 0. Correr Limpiar_DatosTP3.sql (deja todo en 0, tambien el control).
 
    PASO 1. Corte en un cierre. En Simulacion_TP3.sql:
               @pruebaFechaDetener           = '2026-04-01'
@@ -47,7 +47,10 @@
    PASO 5. CONSULTA B: todo debe salir OK.
 
    Los valores esperados de la CONSULTA B son los de la corrida completa
-   del 17-nov-2026 (122 fechas, 100 movimientos, 27 cierres). Si se cambian
+   del 17-nov-2026 (122 fechas, 100 movimientos, 27 cierres). Desde el
+   18-nov la parte B4 revisa tambien los comprobantes: 100, uno por cada
+   movimiento del XML (todos son compras, retiros o depositos), ninguno
+   repetido aunque la corrida se corte y se reanude. Si se cambian
    las reglas financieras (por ejemplo el saldo minimo del primer mes),
    primero hay que hacer una corrida completa sin cortes y actualizar estos
    valores.
@@ -226,4 +229,79 @@ SELECT
     (SELECT COUNT(*) FROM dbo.ErrorBD),
     CASE WHEN (SELECT COUNT(*) FROM dbo.ErrorBD) = 0
          THEN 'OK' ELSE 'DIFERENTE' END;
+
+-- B4. Comprobantes: uno por cada compra, retiro o deposito, con el correo
+--     del dueno de la cuenta, y ninguno repetido
+DECLARE @cantComprobantes INT;
+DECLARE @cantFaltantes INT;
+DECLARE @cantSobrantes INT;
+DECLARE @cantMalVinculados INT;
+DECLARE @cantOtroDestino INT;
+
+SELECT @cantComprobantes = COUNT(*)
+FROM dbo.Comprobante;
+
+-- Movimientos de un tipo que genera comprobante, pero sin comprobante
+SELECT @cantFaltantes = COUNT(*)
+FROM dbo.Movimiento AS M
+INNER JOIN dbo.TipoMovimiento AS TM
+    ON TM.Id = M.IdTipoMovimiento
+WHERE TM.flagGeneraComprobante = 1
+  AND M.IdComprobante IS NULL;
+
+-- Movimientos de un tipo que NO genera comprobante, pero con uno
+SELECT @cantSobrantes = COUNT(*)
+FROM dbo.Movimiento AS M
+INNER JOIN dbo.TipoMovimiento AS TM
+    ON TM.Id = M.IdTipoMovimiento
+WHERE TM.flagGeneraComprobante = 0
+  AND M.IdComprobante IS NOT NULL;
+
+-- Comprobantes que no tienen exactamente un movimiento (1 a 1)
+SELECT @cantMalVinculados = COUNT(*)
+FROM dbo.Comprobante AS C
+WHERE (SELECT COUNT(*)
+       FROM dbo.Movimiento AS M
+       WHERE M.IdComprobante = C.Id) <> 1;
+
+-- Comprobantes de otra cuenta que su movimiento, o a otro correo que el
+-- del dueno de esa cuenta
+SELECT @cantOtroDestino = COUNT(*)
+FROM dbo.Comprobante AS C
+INNER JOIN dbo.Movimiento AS M
+    ON M.IdComprobante = C.Id
+INNER JOIN dbo.EstadoCuenta AS EC
+    ON EC.Id = M.IdEstadoCuenta
+INNER JOIN dbo.Cuenta AS CU
+    ON CU.Id = EC.IdCuenta
+INNER JOIN dbo.Persona AS P
+    ON P.Id = CU.IdPersona
+WHERE C.IdCuenta <> CU.Id
+   OR C.EmailDestino <> P.Email;
+
+SELECT
+    'Comprobantes generados (esperado 100)' AS Verificacion,
+    @cantComprobantes AS Obtenido,
+    CASE WHEN @cantComprobantes = 100
+         THEN 'OK' ELSE 'DIFERENTE' END AS Resultado
+UNION ALL
+SELECT
+    'Movimientos que debian tener comprobante y no lo tienen (esperado 0)',
+    @cantFaltantes,
+    CASE WHEN @cantFaltantes = 0 THEN 'OK' ELSE 'DIFERENTE' END
+UNION ALL
+SELECT
+    'Movimientos con comprobante que no debian tenerlo (esperado 0)',
+    @cantSobrantes,
+    CASE WHEN @cantSobrantes = 0 THEN 'OK' ELSE 'DIFERENTE' END
+UNION ALL
+SELECT
+    'Comprobantes sin su movimiento o repetidos (esperado 0)',
+    @cantMalVinculados,
+    CASE WHEN @cantMalVinculados = 0 THEN 'OK' ELSE 'DIFERENTE' END
+UNION ALL
+SELECT
+    'Comprobantes de otra cuenta o a otro correo (esperado 0)',
+    @cantOtroDestino,
+    CASE WHEN @cantOtroDestino = 0 THEN 'OK' ELSE 'DIFERENTE' END;
 GO
