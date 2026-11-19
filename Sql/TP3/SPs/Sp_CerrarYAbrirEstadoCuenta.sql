@@ -1,13 +1,55 @@
+/*
+    Procedimiento: sp_CerrarYAbrirEstadoCuenta
+
+    Cierra el estado de cuenta correspondiente a la fecha indicada
+    y abre el estado del siguiente periodo.
+
+    Calcula intereses sobre el saldo minimo, comisiones por exceso
+    de operaciones, multas por saldo minimo y cargos mensuales.
+    Registra los movimientos correspondientes y actualiza los saldos.
+
+    Las actualizaciones se realizan dentro de una transaccion.
+
+    Codigos de resultado:
+        0           Operacion exitosa.
+        50300       Parametros invalidos.
+        50301       La cuenta no existe.
+        50302       No existe un unico estado para cerrar.
+        50303       El periodo ya fue cerrado.
+        50304       Contadores sin inicializar.
+        50305       Los saldos no coinciden.
+        50306       Faltan tipos de movimiento.
+        50307       Saldo insuficiente para los cargos.
+        50308       Ya existen movimientos del cierre.
+        Otro        Error de SQL Server.
+
+    Ejemplo de ejecucion (solo en una base de pruebas):
+
+    DECLARE @Codigo INT;
+    DECLARE @IdNuevoEstado INT;
+
+    EXEC dbo.sp_CerrarYAbrirEstadoCuenta
+        @inNumeroCuenta = 'NUMERO_CUENTA',
+        @inFechaCierre = '2026-03-31',
+        @outResultCode = @Codigo OUTPUT,
+        @outIdNuevoEstadoCuenta = @IdNuevoEstado OUTPUT;
+
+    SELECT
+        @Codigo AS CodigoResultado,
+        @IdNuevoEstado AS IdNuevoEstadoCuenta;
+
+    -- Los valores del ejemplo deben adaptarse a una cuenta de prueba
+    -- cuya fecha de cierre coincida con la indicada.
+*/
+
+
 USE CuentaAhorrosTP2;
 GO
-
---Cierre del periodo que se indica y abre el que sigue en una transaccion
 CREATE OR ALTER PROCEDURE dbo.sp_CerrarYAbrirEstadoCuenta
 	@inNumeroCuenta VARCHAR(16),
 	@inFechaCierre DATE,
 	@outResultCode INT OUTPUT,
 	@outIdNuevoEstadoCuenta INT OUTPUT
-
 AS 
 BEGIN
 	SET NOCOUNT ON;
@@ -307,13 +349,54 @@ BEGIN TRY
         SET @outResultCode = 0;
 
     END TRY
+
     BEGIN CATCH
+        DECLARE @NumeroError INT = ERROR_NUMBER();
+        DECLARE @SeveridadError INT = ERROR_SEVERITY();
+        DECLARE @EstadoError INT = ERROR_STATE();
+        DECLARE @ProcedimientoError NVARCHAR(128) = ERROR_PROCEDURE();
+        DECLARE @LineaError INT = ERROR_LINE();
+        DECLARE @MensajeError NVARCHAR(4000) = ERROR_MESSAGE();
+
         IF @@TRANCOUNT > 0
+        BEGIN
             ROLLBACK TRANSACTION;
+        END;
 
         SET @outIdNuevoEstadoCuenta = NULL;
-        SET @outResultCode = ERROR_NUMBER();
-        PRINT ERROR_MESSAGE();
+        SET @outResultCode = @NumeroError;
+
+        BEGIN TRY
+            INSERT INTO dbo.ErrorBD
+            (
+                FechaHora,
+                NumeroError,
+                Severidad,
+                Estado,
+                Procedimiento,
+                Linea,
+                Mensaje
+            )
+            VALUES
+            (
+                SYSDATETIME(),
+                @NumeroError,
+                @SeveridadError,
+                @EstadoError,
+                @ProcedimientoError,
+                @LineaError,
+                @MensajeError
+            );
+        END TRY
+        BEGIN CATCH
+            PRINT CONCAT(
+                'No se pudo registrar el error en ErrorBD: ',
+                ERROR_MESSAGE()
+            );
+        END CATCH;
+
+        PRINT @MensajeError;
     END CATCH;
+
 END;
 GO

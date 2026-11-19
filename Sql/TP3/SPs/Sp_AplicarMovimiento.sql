@@ -1,11 +1,43 @@
---SP para identificar cuenta y tipomovimiento
---Comprobar que exista, rechaza operaciones duplicadas
---y debitos con fondos insuficientes, actualiza saldos
---genera sinpe como segundo movimiento y confirma cambios, sino nada
---Si el tipo de movimiento genera comprobante (flagGeneraComprobante),
---inserta primero el comprobante con el texto del correo para el dueno de
---la cuenta (dbo.Comprobante; el FK queda en Movimiento). El correo lo envia
---despues el servidor web, fuera de esta transaccion.
+/*
+    Procedimiento: sp_AplicarMovimiento
+
+    Aplica movimientos bancarios y actualiza los saldos
+    y contadores de la cuenta y su estado de cuenta.
+
+    Valida la existencia de la cuenta, movimientos duplicados
+    y fondos disponibles. También aplica comisiones SINPE
+    y genera los comprobantes correspondientes.
+
+    Todas las actualizaciones se realizan dentro
+    de una transacción.
+
+    Códigos de resultado:
+        0           Operación exitosa.
+        50200       Parámetros inválidos.
+        50201       Tipo de movimiento inválido.
+        50202-50209 Errores de validación financiera.
+        Otro        Error de SQL Server.
+
+    Ejemplo de ejecución:
+
+    DECLARE @Codigo INT;
+    DECLARE @IdMovimiento INT;
+
+    EXEC dbo.sp_AplicarMovimiento
+        @inNumeroCuenta = 'NUMERO_CUENTA',
+        @inTipoMovimiento = 'Compra',
+        @inFechaMovimiento = '2026-03-01',
+        @inMonto = 1000.00,
+        @inDescripcion = N'Compra de prueba',
+        @inReferenciaOrigen = 'PRUEBA-001',
+        @outResultCode = @Codigo OUTPUT,
+        @outIdMovimiento = @IdMovimiento OUTPUT;
+
+    SELECT @Codigo AS CodigoResultado,
+           @IdMovimiento AS IdMovimiento;
+
+    -- Ejemplo ilustrativo: ejecutar solo en una base de pruebas.
+*/
 
 USE CuentaAhorrosTP2;
 GO
@@ -420,13 +452,52 @@ BEGIN
         SET @outResultCode = 0;
     END TRY
     BEGIN CATCH
+        DECLARE @NumeroError INT = ERROR_NUMBER();
+        DECLARE @SeveridadError INT = ERROR_SEVERITY();
+        DECLARE @EstadoError INT = ERROR_STATE();
+        DECLARE @ProcedimientoError NVARCHAR(128) = ERROR_PROCEDURE();
+        DECLARE @LineaError INT = ERROR_LINE();
+        DECLARE @MensajeError NVARCHAR(4000) = ERROR_MESSAGE();
+
         IF @@TRANCOUNT > 0
+        BEGIN
             ROLLBACK TRANSACTION;
+        END;
 
         SET @outIdMovimiento = NULL;
-        SET @outResultCode = ERROR_NUMBER();
+        SET @outResultCode = @NumeroError;
 
-        PRINT ERROR_MESSAGE();
+        BEGIN TRY
+            INSERT INTO dbo.ErrorBD
+            (
+                FechaHora,
+                NumeroError,
+                Severidad,
+                Estado,
+                Procedimiento,
+                Linea,
+                Mensaje
+            )
+            VALUES
+            (
+                SYSDATETIME(),
+                @NumeroError,
+                @SeveridadError,
+                @EstadoError,
+                @ProcedimientoError,
+                @LineaError,
+                @MensajeError
+            );
+        END TRY
+        BEGIN CATCH
+            PRINT CONCAT(
+                'No se pudo registrar el error en ErrorBD: ',
+                ERROR_MESSAGE()
+            );
+        END CATCH;
+
+        PRINT @MensajeError;
     END CATCH;
+
 END;
 GO
